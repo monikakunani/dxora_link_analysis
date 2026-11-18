@@ -1,0 +1,64 @@
+{
+  "success": true,
+  "website": "https://example.com",
+  "brand": {
+    "name": "Example Studio",
+    "category": "Web Design",
+    "summary": "Example Studio provides website design and development for small businesses. This response is illustrative, not a live analysis."
+  },
+  "analysis": {
+    "competitor_analysis": {
+      "brand_overview": "The sample brand offers website design and development.",
+      "business_category": "Web Design",
+      "main_products_services": ["Website design", "Website development"],
+      "competitors": [
+        {"name": "Sample Competitor A", "main_service": "Web design", "target_market": "Small businesses", "key_strength": "Broad service range", "weakness_or_gap": "Not independently researched", "opportunity": "Differentiate through the stated customer focus", "competitor_source": "AI-identified based on industry knowledge"},
+        {"name": "Sample Competitor B", "main_service": "Web development", "target_market": "Startups", "key_strength": "Not independently researched", "weakness_or_gap": "Not independently researched", "opportunity": "Compare verified public offerings before acting", "competitor_source": "AI-identified based on industry knowledge"},
+        {"name": "Sample Competitor C", "main_service": "Digital services", "target_market": "Local companies", "key_strength": "Not independently researched", "weakness_or_gap": "Not independently researched", "opportunity": "Use customer testimonials to clarify positioning", "competitor_source": "AI-identified based on industry knowledge"}
+      ],
+      "brand_strengths": ["Clear service focus"],
+      "opportunities": ["Publish detailed service pages"]
+    },
+    "target_search_queries": [
+      {"query": "web design for small businesses", "platforms": ["Google"], "intent": "Service Search", "business_relevance": "Matches the sample service", "target_audience": "Small business owners"},
+      {"query": "small business website design", "platforms": ["Facebook"], "intent": "Business Discovery", "business_relevance": "Supports discovery of the service", "target_audience": "Small business owners"},
+      {"query": "modern small business website ideas", "platforms": ["Instagram"], "intent": "Inspiration", "business_relevance": "Fits a visual portfolio", "target_audience": "New business owners"},
+      {"query": "website development partner for startups", "platforms": ["LinkedIn"], "intent": "B2B Search", "business_relevance": "Targets business buyers", "target_audience": "Startup founders"},
+      {"query": "affordable website design services", "platforms": ["X"], "intent": "Service Discovery", "business_relevance": "Connects service and value", "target_audience": "Cost-conscious businesses"}
+    ],
+    "seo_improvements": {
+      "primary_keyword": "web design for small businesses",
+      "secondary_keywords": ["small business website", "website development"],
+      "long_tail_keywords": ["website design services for local businesses"],
+      "business_keywords": ["web design", "website development"],
+      "recommended_title": "Small Business Web Design | Example Studio",
+      "title_primary_keyword": "small business web design",
+      "title_structure_notes": "Put the core service before the brand name.",
+      "meta_description": "Example Studio designs and develops websites for small businesses.",
+      "business_summary": "A sample web design and development provider.",
+      "meta_keywords": ["web design", "small business website"],
+      "supporting_content": [
+        {"content_type": "Service page", "title": "Website Design for Small Businesses", "description": "Explain the design process and deliverables.", "target_keyword": "small business web design"},
+        {"content_type": "FAQ", "title": "Website Design Questions", "description": "Answer common buyer questions about cost and timing.", "target_keyword": "website design questions"},
+        {"content_type": "Case study", "title": "Small Business Website Projects", "description": "Show outcomes from verified client work.", "target_keyword": "small business website examples"}
+      ]
+    },
+    "top_services": [
+      {"service_name": "Website design", "description": "Plan and design business websites.", "target_industry": "Small businesses", "target_customer": "Business owners", "main_benefit": "A clear online presence", "source": "website"},
+      {"service_name": "Website development", "description": "Build responsive business websites.", "target_industry": "Small businesses", "target_customer": "Business owners", "main_benefit": "A working website for customers", "source": "website"},
+      {"service_name": "Website maintenance", "description": "Potential ongoing site maintenance offer.", "target_industry": "Small businesses", "target_customer": "Website owners", "main_benefit": "Keep website content current", "source": "inferred"},
+      {"service_name": "Accessibility review", "description": "Potential accessibility improvement service.", "target_industry": "Small businesses", "target_customer": "Website owners", "main_benefit": "Make website content easier to use", "source": "inferred"},
+      {"service_name": "Search optimization", "description": "Potential on-page SEO support.", "target_industry": "Small businesses", "target_customer": "Business owners", "main_benefit": "Improve search visibility", "source": "inferred"}
+    ],
+    "target_audience": {
+      "primary_audience": [{"audience_name": "Small business owners", "business_type": "Small business", "requirement": "Business website"}],
+      "secondary_audience": [{"audience_name": "Startup founders", "business_type": "Startup", "requirement": "Launch-ready website"}],
+      "industries": ["Small business"],
+      "customer_needs": ["Online presence", "Website maintenance"],
+      "geographical_focus": null,
+      "customer_interests": ["Digital presence"],
+      "recommended_segments": ["New local businesses"]
+    }
+  },
+  "sample_note": "Illustrative schema example; not generated from a live API request."
+}
