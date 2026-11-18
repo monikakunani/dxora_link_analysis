@@ -1,6 +1,6 @@
 # AI-Powered Website Link Analysis API
 
-> A production-grade FastAPI microservice that extracts website content, conducts deep brand and competitive analysis via Google Gemini LLM, and produces structured SEO, service, and audience intelligence.
+> A production-grade FastAPI microservice that extracts website content, conducts structured brand and competitive analysis via Google Gemini LLM, and produces validated SEO, service, and audience intelligence.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green)
@@ -17,13 +17,15 @@
 - [Setup & Installation](#setup--installation)
 - [Running the Server](#running-the-server)
 - [API Documentation](#api-documentation)
-- [Live Benchmark & Real Run Verification](#live-benchmark--real-run-verification)
+- [Live Benchmark & Measured Run Verification](#live-benchmark--measured-run-verification)
 - [Sample API Request & Response](#sample-api-request--response)
 - [Running Tests](#running-tests)
 - [LLM Platform Comparison & Recommendation](#llm-platform-comparison--recommendation)
 - [Cost Optimization Strategies](#cost-optimization-strategies)
+- [Competitor Intelligence & Sourcing](#competitor-intelligence--sourcing)
 - [Error Handling](#error-handling)
 - [Security](#security)
+- [Submission & Verification Checklist](#submission--verification-checklist)
 
 ---
 
@@ -32,14 +34,14 @@
 - **SSRF-Safe Content Extraction**: Fetches and parses website HTML using `aiohttp` + `BeautifulSoup4` with DNS pinning, manual redirect verification, and a 5 MB streaming cap.
 - **LLM-Powered Business Intelligence**: Uses Google Gemini (`gemini-3.5-flash-lite`) to analyze page context in a single cost-optimized prompt.
 - **5-Section Structured Analysis**:
-  1. **Competitor vs Your Brand Analysis**: Pinpoints brand strengths, opportunities, and exactly 3 key market competitors with verified sourcing labels.
+  1. **Competitor vs Your Brand Analysis**: Pinpoints brand strengths, opportunities, and exactly 3 market competitors with transparent sourcing labels (`competitor_source: "AI-identified based on industry knowledge"`).
   2. **Top 5 Target Search Queries**: Generates exactly 5 queries tailored to 5 major platforms (Google, Facebook, Instagram, LinkedIn, X).
   3. **SEO Improvement Recommendations**: Primary, secondary, long-tail keywords, title tag, meta description, and 3+ supporting content recommendations.
   4. **Top 5 Services Identification**: Exactly 5 key services labeled as explicitly mentioned (`website`) or recommended (`inferred`).
   5. **Target Audience Identification**: Primary & secondary audience segments, user needs, and relevant industries.
 - **In-Memory TTL Caching**: Eliminates duplicate LLM calls on repeated URLs using normalized URL keys.
 - **Pure-ASGI Sliding-Window Rate Limiting**: Protects upstream LLM quotas per client IP (default: 60 req/min).
-- **Strict Pydantic Validation**: Guaranteed response structure and exact item count constraints.
+- **Strict Pydantic Validation**: Enforces exact required counts (3 competitors, 5 search queries, 5 services, 3+ content pieces) at the API boundary.
 
 ---
 
@@ -78,8 +80,8 @@
 4. On cache miss, `validate_url` performs pre-flight SSRF protection (scheme, port, private IP ranges).
 5. `WebsiteExtractor` fetches content using pinned DNS resolvers and manually audited redirects.
 6. `BeautifulSoup4` cleans noise tags (`<script>`, `<style>`, SVGs) and extracts structured headings, links, and text capped at 50,000 characters.
-7. `LLMService` submits content to Gemini with exponential backoff retries for transient errors.
-8. `AnalysisService` verifies counts, triggers competitor enrichment hook, caches the result, and returns the response.
+7. `LLMService` submits content to Gemini with automatic exponential backoff retries for transient capacity errors (HTTP 429/503).
+8. `AnalysisService` verifies item counts, invokes the `CompetitorService` enrichment hook, stores the result in cache, and returns the response.
 
 ---
 
@@ -89,7 +91,7 @@
 dxora_link_analysis/
 ├── app/
 │   ├── __init__.py
-│   ├── main.py                    # FastAPI application, routes, and ASGI rate limiter
+│   ├── main.py                    # FastAPI app, routes, and ASGI rate limiter
 │   ├── config.py                  # Pydantic/dotenv application settings
 │   ├── schemas.py                 # Strict Pydantic response & request models
 │   ├── services/
@@ -106,8 +108,8 @@ dxora_link_analysis/
 │   ├── __init__.py
 │   └── test_link_analysis.py      # Full test suite (26/26 tests passing)
 ├── live_test.py                   # Script for live end-to-end verification
-├── live_run_output.json           # Raw JSON response from live Gemini run against stripe.com
-├── live_run.log                   # Full console execution log of real Gemini run
+├── live_run_output.json           # Tracked raw JSON response with benchmark metadata
+├── live_run.log                   # Tracked console execution log of real Gemini run
 ├── sample_response.json           # Illustrative reference fixture
 ├── Dockerfile                     # Multi-stage production container definition
 ├── .dockerignore                  # Docker build exclusion rules
@@ -158,7 +160,7 @@ cp .env.example .env
 | `GEMINI_API_KEY` | *(required)* | Google Gemini API key |
 | `LLM_MODEL` | `gemini-3.5-flash-lite` | Target Gemini model |
 | `LLM_TIMEOUT` | `120` | LLM HTTP request timeout (seconds) |
-| `REQUEST_TIMEOUT` | `30` | Website fetch timeout (seconds) |
+| `REQUEST_TIMEOUT` | `60` | Website fetch timeout (seconds) |
 | `MAX_CONTENT_LENGTH` | `50000` | Character cutoff for cleaned page content |
 | `MAX_RESPONSE_BYTES` | `5242880` | Max decompressed HTML response size (5 MB) |
 | `CACHE_TTL_SECONDS` | `3600` | In-memory cache duration for validated analyses |
@@ -186,7 +188,7 @@ docker build -t dxora-link-analysis .
 docker run --rm -p 4000:4000 --env-file .env dxora-link-analysis
 ```
 
-The container runs as an unprivileged non-root user (`app`), incorporates an automated Docker health check against `GET /`, and omits environment files via `.dockerignore`.
+The container runs as an unprivileged non-root user (`app`), incorporates an automated Docker health check against `GET /`, and excludes local environment secrets via `.dockerignore`.
 
 ---
 
@@ -199,30 +201,28 @@ Interactive OpenAPI documentation is automatically served:
 
 ---
 
-## Live Benchmark & Real Run Verification
+## Live Benchmark & Measured Run Verification
 
-A real live analysis was executed against `https://stripe.com` using the live Google Gemini API (`gemini-3.5-flash-lite`).
+A live end-to-end verification was executed against `https://stripe.com` through the full `AnalysisService` pipeline using the Google Gemini API (`gemini-3.5-flash-lite`).
 
-The full verifiable artifacts are checked in:
-- Full output JSON: [`live_run_output.json`](live_run_output.json)
-- Formatted execution log: [`live_run.log`](live_run.log)
+Both execution artifacts are checked into the repository:
+- Full output JSON with embedded benchmark metadata: [`live_run_output.json`](live_run_output.json)
+- Full terminal execution log: [`live_run.log`](live_run.log)
 
-### Measured Performance Benchmark
+### Measured Benchmark Data (Single Run on `https://stripe.com`)
 
-| Pipeline Stage | Measured Latency | Tokens / Volume | Notes |
-|---|---|---|---|
-| **Website Fetch & Extraction** | 1.6s – 5.6s | 45,489 chars | aiohttp + BS4 cleaning noise & de-duplicating paragraphs |
-| **Gemini 3.5 Flash-Lite Analysis** | 15.0s – 15.8s | ~11.5k input / ~2.1k output | Full 5-section structured JSON generation in 1 prompt |
-| **Schema Validation & Enrichment** | 0.01s | In-memory | Strict Pydantic parsing & constraint verification |
-| **Total End-to-End Latency** | **16.6s – 21.4s** | — | **0.00s on repeated runs** (served directly from cache) |
-
-### Real Run Quality Audit
-
-- **Brand Extraction**: Correctly identified brand as `Stripe` and category as `Financial Services & Payment Infrastructure`.
-- **Competitor Identification**: Correctly proposed **PayPal**, **Adyen**, and **Square** with relevant key strengths, gaps, and differentiation opportunities. Labeled explicitly with `competitor_source: "AI-identified based on industry knowledge"`.
-- **Top Services**: Extracted 5 core services (*Online and In-Person Payments*, *Flexible Billing*, *Fraud Prevention (Radar)*, *Card Issuing*, *Embedded Financial Services*) directly from website text (`source: "website"`).
-- **Search Queries**: Delivered 5 targeted queries mapped to distinct platforms (*Google: Service Search*, *Facebook: Business Discovery*, *LinkedIn: B2B Search*, *X: Service Discovery*, *Instagram: Inspiration*).
-- **SEO & Audience**: Produced targeted title, meta description, 3 distinct content formats (blog post, landing page, FAQ), and segmented primary (software engineers, CTOs) from secondary audiences (startup founders, enterprise leaders).
+| Metric | Measured Value | Measurement Basis |
+|---|---|---|
+| **Raw HTML Downloaded** | **724,310 bytes** (723,039 chars) | Live stream from `https://stripe.com` |
+| **Cleaned Text Extracted** | **45,489 chars** | Post-BeautifulSoup script/style/SVG removal |
+| **Content Reduction** | **93.7% reduction** | `(1 - 45,489 / 723,039) * 100` |
+| **Gemini Prompt Tokens** | **11,669 tokens** | Reported by Gemini `usageMetadata.promptTokenCount` |
+| **Gemini Output Tokens** | **2,326 tokens** | Reported by Gemini `usageMetadata.candidatesTokenCount` |
+| **Gemini Total Tokens** | **13,995 tokens** | Reported by Gemini `usageMetadata.totalTokenCount` |
+| **Calculated Inference Cost** | **$0.009316 USD** | Standard Gemini rates: `(11,669 * $0.30 + 2,326 * $2.50) / 1,000,000` |
+| **Cold Run Latency** | **76.89s** | Includes 724 KB download + 2 transient 503 backoff retries (3s + 6s) + LLM inference |
+| **Warm Cache Hit Latency** | **1.746 ms (0.0017s)** | Measured on repeat request to `AnalysisService.analyze()` |
+| **Cache Output Parity** | **Identical (PASSED)** | Deep comparison of cold vs warm Pydantic response dictionaries |
 
 ---
 
@@ -244,13 +244,13 @@ curl -X POST http://localhost:4000/link-analysis \
   "website": "https://stripe.com",
   "brand": {
     "name": "Stripe",
-    "category": "Financial Services & Payment Infrastructure",
-    "summary": "Stripe is a financial infrastructure platform that helps businesses of all sizes accept online and in-person payments, manage billing models, and handle global money movement."
+    "category": "Financial Infrastructure / Payment Processing",
+    "summary": "Stripe is a comprehensive financial services platform that enables businesses of all sizes to accept online and in-person payments, build flexible billing models, and manage global money movement."
   },
   "analysis": {
     "competitor_analysis": {
       "brand_overview": "Stripe is a leading financial infrastructure platform offering global payment processing, billing models, and financial tools for online and in-person commerce.",
-      "business_category": "Financial Services & Payment Infrastructure",
+      "business_category": "Financial Infrastructure / Payment Processing",
       "main_products_services": [
         "Online and In-Person Payments",
         "Subscription Billing",
@@ -265,25 +265,25 @@ curl -X POST http://localhost:4000/link-analysis \
           "target_market": "Consumers and merchants of all sizes",
           "key_strength": "High brand recognition and consumer trust",
           "weakness_or_gap": "Less developer-centric customization compared to Stripe",
-          "opportunity": "Target developers seeking advanced API integrations and flexible custom revenue models",
+          "opportunity": "Target businesses seeking deeply embedded, highly customizable checkout experiences.",
           "competitor_source": "AI-identified based on industry knowledge"
         },
         {
           "name": "Adyen",
           "main_service": "Global payment gateway and acquiring services",
           "target_market": "Large enterprise and global brands",
-          "key_strength": "Unified single-platform architecture for global enterprise scale",
+          "key_strength": "Unified single-platform architecture for online and in-person commerce",
           "weakness_or_gap": "Higher barrier to entry for smaller startups and SMBs",
-          "opportunity": "Highlight user-friendly startup onboarding and no-code tools to capture fast-growing companies",
+          "opportunity": "Capture fast-growing startups before they scale into enterprise solutions.",
           "competitor_source": "AI-identified based on industry knowledge"
         },
         {
           "name": "Square",
           "main_service": "POS hardware and integrated payment solutions",
           "target_market": "Small to medium brick-and-mortar businesses",
-          "key_strength": "Strong ecosystem of physical point-of-sale hardware and software",
+          "key_strength": "Seamless hardware and software integration for physical storefronts",
           "weakness_or_gap": "Historically less optimized for complex enterprise SaaS and global developer stacks",
-          "opportunity": "Promote advanced software extensibility and developer APIs for tech-forward businesses",
+          "opportunity": "Expand hybrid online-offline toolkits for modern SMBs.",
           "competitor_source": "AI-identified based on industry knowledge"
         }
       ],
@@ -299,39 +299,39 @@ curl -X POST http://localhost:4000/link-analysis \
     },
     "target_search_queries": [
       {
-        "query": "financial infrastructure for online payments",
+        "query": "best payment gateway for global business",
         "platforms": ["Google"],
         "intent": "Service Search",
-        "business_relevance": "Direct intent for businesses seeking developer-grade payment backbones",
-        "target_audience": "Technical founders and engineering leads"
+        "business_relevance": "Direct search intent for businesses seeking scalable international payments",
+        "target_audience": "Technical founders and ecommerce operators"
       },
       {
-        "query": "modern billing software for recurring revenue",
+        "query": "embedded financial infrastructure for platforms",
         "platforms": ["LinkedIn"],
         "intent": "B2B Search",
-        "business_relevance": "Captures finance decision-makers modernizing subscription models",
-        "target_audience": "CFOs, Finance Directors, and SaaS Operations"
+        "business_relevance": "Targets platform leaders and product managers evaluating monetized payments",
+        "target_audience": "CTOs, Heads of Product, and Platform Architects"
       },
       {
-        "query": "how to add global checkout to ecommerce store",
+        "query": "how to integrate online payments on website",
         "platforms": ["Facebook"],
         "intent": "Business Discovery",
-        "business_relevance": "Educates SMB owners scaling into international markets",
-        "target_audience": "E-commerce store operators and merchants"
+        "business_relevance": "Educational entry point for SMB merchants setting up checkouts",
+        "target_audience": "New business owners and entrepreneurs"
       },
       {
-        "query": "best checkout flow examples for mobile conversion",
+        "query": "subscription billing software for saas",
         "platforms": ["Instagram"],
         "intent": "Inspiration",
-        "business_relevance": "Attracts designers and product managers evaluating UX quality",
-        "target_audience": "UI/UX Designers and Growth Marketers"
+        "business_relevance": "Engages software founders seeking recurring billing architectures",
+        "target_audience": "SaaS founders and growth marketers"
       },
       {
-        "query": "stablecoin and crypto payout integration for developers",
+        "query": "fraud prevention tools for online payments",
         "platforms": ["X"],
         "intent": "Service Discovery",
-        "business_relevance": "Engages web3 and fintech developers exploring modern payout rails",
-        "target_audience": "Fintech developers and crypto builders"
+        "business_relevance": "Engages fintech builders and security-conscious engineering teams",
+        "target_audience": "Fintech developers and fraud risk managers"
       }
     ],
     "seo_improvements": {
@@ -346,13 +346,13 @@ curl -X POST http://localhost:4000/link-analysis \
       "recommended_title": "Stripe | Financial Infrastructure to Grow Your Revenue",
       "title_primary_keyword": "financial infrastructure",
       "title_structure_notes": "Brand | Primary Keyword + Clear Value Proposition (<60 chars)",
-      "meta_description": "Stripe is a financial services platform that helps all types of businesses accept payments, build flexible billing models and manage money movement.",
+      "meta_description": "Accept payments, build flexible billing models, and manage money movement globally with Stripe's complete financial infrastructure platform.",
       "business_summary": "Stripe builds economic infrastructure for the internet, enabling businesses from startups to global enterprises to accept payments, manage revenue operations, and launch new business models.",
       "meta_keywords": ["payments", "billing", "financial infrastructure", "fraud prevention", "issuing"],
       "supporting_content": [
         {
           "content_type": "blog post",
-          "title": "Scaling SaaS Billing in 2026: Trends and Best Practices",
+          "title": "Scaling SaaS Billing: Trends and Best Practices",
           "description": "Comprehensive guide detailing modern hybrid usage-based and subscription revenue models.",
           "target_keyword": "saas billing best practices"
         },
@@ -372,43 +372,43 @@ curl -X POST http://localhost:4000/link-analysis \
     },
     "top_services": [
       {
-        "service_name": "Online and In-Person Payments",
-        "description": "Accept and optimize payments globally across digital channels and physical point-of-sale terminals.",
+        "service_name": "Online and In-Person Payment Processing",
+        "description": "Higher authorization rates and unified commerce across online checkouts and physical terminals.",
         "target_industry": "E-commerce, Retail, and Digital Services",
         "target_customer": "Online retailers and multichannel merchants",
-        "main_benefit": "Maximize authorization rates and conversion with a unified checkout architecture.",
+        "main_benefit": "Maximize checkout conversion with optimized localized payment rails.",
         "source": "website"
       },
       {
-        "service_name": "Flexible Billing",
-        "description": "Implement custom revenue models, subscriptions, and usage-based billing structures easily.",
+        "service_name": "Stripe Billing",
+        "description": "Automated revenue collection, recurring invoicing, and usage-based subscriptions.",
         "target_industry": "Software and SaaS",
         "target_customer": "Subscription businesses and software companies",
-        "main_benefit": "Eliminate billing friction and reduce involuntary churn with automated recovery tools.",
+        "main_benefit": "Eliminate billing friction and reduce involuntary churn with smart recovery.",
         "source": "website"
       },
       {
-        "service_name": "Fraud Prevention (Radar)",
-        "description": "Stop fraudulent transactions and card testing without blocking legitimate customer growth.",
+        "service_name": "Stripe Radar",
+        "description": "Zero friction for genuine customers while blocking bad actors using adaptive machine learning.",
         "target_industry": "High-volume internet businesses",
         "target_customer": "Fraud risk teams and finance managers",
-        "main_benefit": "Adaptive machine learning protects revenue without adding unnecessary buyer friction.",
+        "main_benefit": "Stop payment fraud without rejecting legitimate customer transactions.",
         "source": "website"
       },
       {
-        "service_name": "Card Issuing",
-        "description": "Create, manage, and scale your own card issuing program with embedded financial tools.",
-        "target_industry": "Fintech and On-Demand Marketplaces",
-        "target_customer": "Platform operators and commercial fleet managers",
-        "main_benefit": "Programmatically issue physical or virtual cards with custom spend limits in minutes.",
-        "source": "website"
-      },
-      {
-        "service_name": "Embedded Financial Services for Platforms",
-        "description": "Integrate payments and financial services directly into your vertical SaaS platform.",
+        "service_name": "Stripe Connect",
+        "description": "New revenue streams and simplified multi-party payouts for platforms and marketplaces.",
         "target_industry": "Vertical SaaS and Marketplaces",
-        "target_customer": "Platform executives and product managers",
-        "main_benefit": "Monetize software platforms and deliver seamless payment experiences to sub-merchants.",
+        "target_customer": "Platform executives and marketplace operators",
+        "main_benefit": "Onboard sub-merchants and programmatically route payments at scale.",
+        "source": "website"
+      },
+      {
+        "service_name": "Professional Implementation Services",
+        "description": "Faster time-to-market and minimized integration risk with guided architectural advisory.",
+        "target_industry": "Enterprises and high-growth companies",
+        "target_customer": "Enterprise CTOs and engineering directors",
+        "main_benefit": "Accelerate mission-critical migrations with dedicated technical support.",
         "source": "website"
       }
     ],
@@ -422,7 +422,7 @@ curl -X POST http://localhost:4000/link-analysis \
         {
           "audience_name": "Startup Founders",
           "business_type": "Early-stage Companies",
-          "requirement": "Fast incorporation, easy setup, and tools to fundraise and accept payments quickly."
+          "requirement": "Fast incorporation, easy setup, and tools to accept payments quickly."
         }
       ],
       "secondary_audience": [
@@ -505,37 +505,62 @@ tests/test_link_analysis.py::test_cache_invalidate PASSED                      [
 
 ## LLM Platform Comparison & Recommendation
 
-### A. Comparative Evaluation Across Providers
+### A. Provider Platform Comparison
 
-| Criteria | Google Gemini 3.5 Flash-Lite *(Selected)* | OpenAI GPT-4o-mini | Anthropic Claude 3.5 Haiku |
+Comparison across leading fast-tier inference models using current published rates:
+
+| Criteria | Google Gemini 3.5 Flash-Lite *(Integrated)* | OpenAI GPT-6 Luna | Anthropic Claude Haiku 5.5 |
 |---|---|---|---|
-| **Input Cost (per 1M tokens)** | **$0.30** | $0.15 | $0.80 |
-| **Output Cost (per 1M tokens)** | **$2.50** | $0.60 | $4.00 |
-| **Measured Response Speed** | **15.0s – 15.8s** *(Measured live)* | ~12s – 18s *(Estimated)* | ~10s – 16s *(Estimated)* |
-| **Output Reliability** | **100% Schema Compliance** *(Verified)* | High (Structured Outputs) | High (JSON Mode) |
-| **Context Window** | **1,048,576 tokens** | 128,000 tokens | 200,000 tokens |
-| **Native JSON Schema Mode** | `responseMimeType: application/json` | `response_format: json_schema` | Tool calling / Pre-fill |
-| **Cost per 10k Input / 2k Output Analysis** | **$0.0080** | $0.0027 | $0.0160 |
+| **Provider** | Google | OpenAI | Anthropic |
+| **Model Name** | `gemini-3.5-flash-lite` | `gpt-6-luna` | `claude-haiku-5-5` |
+| **Input Cost (per 1M tokens)** | $0.30 | **$0.10** | **$0.10** (base ≤100k) |
+| **Output Cost (per 1M tokens)** | $2.50 | **$0.50** | **$0.50** (base ≤100k) |
+| **Context Window** | **1,048,576 tokens** | 1,050,000 tokens | 1,000,000 tokens |
+| **Native JSON Schema Mode** | `responseMimeType: application/json` | Structured Outputs | Structured Outputs |
+| **Local Benchmark Evidence** | **Measured** (76.89s cold w/ retries; 13,995 total tokens; $0.0093/call) | *Unmeasured in this project* | *Unmeasured in this project* |
+| **Official Documentation** | [Google Pricing](https://ai.google.dev/gemini-api/docs/pricing) | [OpenAI Docs](https://developers.openai.com/api/docs/models/gpt-6-luna) | [Anthropic Docs](https://platform.claude.com/docs/en/models/haiku-5-5/overview) |
 
-### B. Why Gemini 3.5 Flash-Lite?
+> **Pricing note:** Claude Haiku 5.5 lists a base pricing of $0.10 input / $0.50 output per million tokens for prompts under 100,000 tokens, which rises to $0.50 input / $2.50 output for prompt contexts exceeding 100k tokens.
 
-1. **Context Window Headroom**: The 1M+ context window easily accommodates full landing pages with zero risk of context overflow even before content cleaning.
-2. **Deterministic JSON Formatting**: Combined with Pydantic validation, Gemini's JSON mode guarantees exact section and field key compliance.
-3. **Cost Efficiency**: At less than $0.01 per full 5-section enterprise analysis, it offers an optimal balance of operational affordability and output richness.
-4. **Resilience**: Integrated automatic exponential backoff gracefully handles transient 429/503 spikes.
+### B. Selection Rationale
+
+**Selected: Google Gemini 3.5 Flash-Lite**
+
+1. **Assignment Alignment**: Already integrated in the codebase with verified end-to-end execution and schema compliance.
+2. **Context Capacity**: 1,048,576 tokens context window easily handles large landing pages and eliminates token boundary issues.
+3. **Structured Outputs**: Fully supports strict JSON generation, verified against Pydantic schema validation across 26 tests and live runs.
+4. **Cost Assessment**: At **$0.0093 per full 5-section enterprise analysis** (11,669 input + 2,326 output tokens), it delivers production-grade business insights at sub-cent cost per request. While GPT-6 Luna lists lower nominal per-token pricing, Gemini 3.5 Flash-Lite is operational, tested, and satisfies all requirements.
 
 ---
 
 ## Cost Optimization Strategies
 
-| Strategy | Technical Mechanism | Savings Rationale & Calculation Basis |
+| Strategy | Implementation | Evidence & Measured Impact |
 |---|---|---|
-| **HTML Cleaning** | Strips `<script>`, `<style>`, comments, `<svg>`, `<iframe>` before parsing | **40%–60% token reduction**: CSS styles and JS bundle blobs constitute 50%+ of raw modern web page size. |
-| **Content Deduplication** | Discards repeating footer links, duplicate nav text, and boilerplate strings | **10%–20% token reduction**: Removes repetitive site navigation headers and footer disclaimer text. |
-| **Hard Truncation Cap** | Caps body extraction at 50,000 characters (~12,500 tokens) | **Cost spike prevention**: Protects against runaway token bills on massive docs sites or single-page apps. |
-| **Single-Prompt Consolidation** | Gathers all 5 analysis dimensions in 1 LLM inference pass | **80% call reduction**: 1 API request vs. 5 separate round-trips avoids repeated system prompt and context re-ingestion. |
-| **In-Memory TTL Caching** | Serves cached analyses for normalized URLs (`3600s` TTL) | **100% cost reduction on repeats**: Repeat visits within the TTL window make 0 external HTTP/LLM calls. |
-| **Sliding-Window Rate Limiting** | Restricts bursts per IP address via pure ASGI middleware | **Quota protection**: Prevents malicious or misconfigured clients from exhausting provider quotas. |
+| **HTML Cleaning** | Strips `<script>`, `<style>`, comments, `<svg>`, `<iframe>` before extracting text | **93.7% reduction measured**: On `stripe.com`, raw HTML was 724,310 bytes (723,039 chars), compressed down to 45,489 characters of meaningful content. |
+| **Hard Truncation Cap** | Caps body extraction at 50,000 characters (~12,500 tokens) | **Prevents runaway token bills** on documentation sites or large single-page applications. |
+| **Single-Prompt Consolidation** | Gathers all 5 analysis sections in one LLM call | **80% fewer round-trips**: Avoids repeating system prompts, extraction context, and TLS handshakes across 5 separate calls. |
+| **In-Memory TTL Caching** | Serves cached analyses for normalized URLs (`3600s` TTL) | **100% cost reduction on repeats**: Repeat visits within the TTL window resolve in **1.746 ms** with 0 external HTTP/LLM calls. |
+| **Sliding-Window Rate Limiting** | Restricts bursts per IP address via pure ASGI middleware | **Quota protection**: Prevents client loops or denial-of-service from exhausting upstream provider tokens. |
+
+---
+
+## Competitor Intelligence & Sourcing
+
+### Current Implementation (AI-Derived Suggestions)
+In this implementation, competitors are generated by Gemini using its trained industry knowledge. To ensure complete transparency:
+- Every competitor object includes the explicit field:
+  ```json
+  "competitor_source": "AI-identified based on industry knowledge"
+  ```
+- Competitors are returned as structured competitive suggestions, not empirical scraped analytics.
+
+### Extensibility: `CompetitorService` Architecture Hook
+The codebase includes [`CompetitorService`](app/services/competitor_service.py) wired directly into [`AnalysisService`](app/services/analysis_service.py).
+When external competitive intelligence API keys (e.g., SimilarWeb, SEMrush, Ahrefs, Crunchbase) are configured, `CompetitorService.enrich_competitors()` provides the hook to:
+1. Validate competitor domain presence and traffic share.
+2. Augment qualitative strengths with organic keyword overlap telemetry.
+3. Verify company URLs and employee counts without modifying core pipeline orchestration.
 
 ---
 
@@ -552,7 +577,7 @@ tests/test_link_analysis.py::test_cache_invalidate PASSED                      [
 | **Rate Limit Exceeded** | `429` | `{"detail": "Rate limit exceeded. Please slow down and try again later."}` with `Retry-After` header |
 | **Missing API Key** | `500` | `"GEMINI_API_KEY is not set. Please add it to your .env file."` |
 | **LLM Service Failure (e.g. Quota/503)** | `502` | `"The analysis provider could not complete the request."` |
-| **Incomplete LLM Output (Item counts invalid)** | `502` | Explicit count mismatch detail (e.g. `"The analysis provider returned 2 competitors; exactly 3 are required."`) |
+| **Incomplete LLM Output (Item counts invalid)** | `502` | Count mismatch detail (e.g. `"The analysis provider returned 2 competitors; exactly 3 are required."`) |
 
 ---
 
@@ -571,6 +596,29 @@ tests/test_link_analysis.py::test_cache_invalidate PASSED                      [
   - Docker container creates and executes under dedicated unprivileged system user `app`.
 - **Secret Isolation**:
   - Sensitive API keys are loaded via `.env` and strictly excluded from git tracking and Docker build contexts.
+
+---
+
+## Submission & Verification Checklist
+
+To complete the public assignment submission:
+
+- [x] **Local Git Repository**: Committed with clean working tree.
+- [x] **26/26 Unit & Integration Tests Passing**: Verified with pytest.
+- [x] **Live Run Evidence**: `live_run.log` and `live_run_output.json` tracked and checked into the repository.
+- [ ] **Public GitHub Repository**:
+  1. Create a new public repository on GitHub (e.g. `dxora_link_analysis`).
+  2. Push the local commits:
+     ```bash
+     git remote add origin https://github.com/<your-username>/dxora_link_analysis.git
+     git branch -M main
+     git push -u origin main
+     ```
+- [ ] **Public Deployment (Optional / Live Demo)**:
+  - If deploying to Render, Railway, or Fly.io:
+    - Set environment variable `GEMINI_API_KEY` in the hosting dashboard.
+    - Provide the live URL (e.g., `https://your-app.onrender.com/docs`).
+- [ ] **Social Account Verification / Submission Email**: Send the public GitHub repository link and deployed demo link according to the assignment instructions.
 
 ---
 

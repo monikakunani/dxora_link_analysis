@@ -121,6 +121,7 @@ class LLMService:
         self.api_key = settings.GEMINI_API_KEY
         self.model = settings.LLM_MODEL
         self.timeout = settings.LLM_TIMEOUT
+        self.last_usage: dict = {}
         if not self.api_key:
             raise ValueError(
                 "GEMINI_API_KEY is not set. Please add it to your .env file."
@@ -189,7 +190,7 @@ class LLMService:
 
         # Retry on transient 429 / 503 errors with exponential back-off
         _RETRYABLE = {429, 500, 502, 503, 504}
-        _MAX_RETRIES = 3
+        _MAX_RETRIES = 5
         last_exc: Exception = RuntimeError("LLM request did not start")
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
@@ -210,7 +211,7 @@ class LLMService:
                     )
                     if status in _RETRYABLE and attempt < _MAX_RETRIES:
                         import asyncio as _asyncio
-                        wait = 2 ** attempt  # 2s, 4s
+                        wait = 3 * attempt  # 3s, 6s, 9s, 12s
                         logger.info("Retrying in %ds...", wait)
                         await _asyncio.sleep(wait)
                         last_exc = RuntimeError(f"LLM API error ({status})")
@@ -222,6 +223,9 @@ class LLMService:
                 raise last_exc
 
         result = response.json()
+        self.last_usage = result.get("usageMetadata", {})
+        if self.last_usage:
+            logger.info("Gemini usage metadata: %s", self.last_usage)
 
         # Parse the generated content
         try:

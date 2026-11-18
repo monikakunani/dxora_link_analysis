@@ -13,7 +13,7 @@ class Settings:
     LLM_TIMEOUT: int = int(os.getenv("LLM_TIMEOUT", "120"))
     
     # Website Extraction
-    REQUEST_TIMEOUT: int = int(os.getenv("REQUEST_TIMEOUT", "30"))
+    REQUEST_TIMEOUT: int = int(os.getenv("REQUEST_TIMEOUT", "60"))
     MAX_CONTENT_LENGTH: int = int(os.getenv("MAX_CONTENT_LENGTH", "50000"))
     MAX_RESPONSE_BYTES: int = int(os.getenv("MAX_RESPONSE_BYTES", str(5 * 1024 * 1024)))
     USER_AGENT: str = os.getenv(

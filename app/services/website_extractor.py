@@ -21,6 +21,7 @@ class WebsiteExtractor:
         self.timeout = settings.REQUEST_TIMEOUT
         self.max_content = settings.MAX_CONTENT_LENGTH
         self.max_response_bytes = settings.MAX_RESPONSE_BYTES
+        self.last_stats: dict = {}
         self.headers = {
             "User-Agent": settings.USER_AGENT,
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
@@ -78,12 +79,13 @@ class WebsiteExtractor:
         """
         visited: set[str] = set()
         current_url = url
-        timeout = aiohttp.ClientTimeout(total=self.timeout, connect=min(self.timeout, 10))
 
         for redirect_count in range(self.MAX_REDIRECTS + 1):
             if current_url in visited:
                 raise ConnectionError("Redirect loop detected")
             visited.add(current_url)
+
+            timeout = aiohttp.ClientTimeout(total=self.timeout, connect=min(self.timeout, 10), sock_read=self.timeout)
 
             try:
                 parsed = urlparse(current_url)
@@ -230,10 +232,15 @@ class WebsiteExtractor:
         }
 
     async def extract(self, url: str) -> dict:
-        """Full pipeline: fetch → parse → extract."""
+        """Full pipeline: fetch -> parse -> extract."""
         logger.info("Fetching website: %s", url)
         html = await self.fetch_html(url)
         logger.info("Extracting content from: %s", url)
         content = self.extract_content(html)
         content["url"] = url
+        self.last_stats = {
+            "raw_bytes": len(html.encode("utf-8")),
+            "raw_chars": len(html),
+            "cleaned_chars": len(content.get("main_text", "")),
+        }
         return content
