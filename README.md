@@ -135,7 +135,7 @@ dxora_link_analysis/
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/<your-username>/dxora_link_analysis.git
+git clone https://github.com/monikakunani/dxora_link_analysis.git
 cd dxora_link_analysis
 
 # 2. Create and activate a virtual environment
@@ -666,17 +666,9 @@ When external competitive intelligence API keys (e.g., SimilarWeb, SEMrush, Ahre
 
 To complete the public assignment submission:
 
-- [x] **Local Git Repository**: Committed with clean working tree.
 - [x] **32/32 Unit & Integration Tests Passing**: Verified with pytest.
 - [x] **Live Run Evidence**: `live_run.log` and `live_run_output.json` tracked and checked into the repository.
-- [ ] **Public GitHub Repository**:
-  1. Create a new public repository on GitHub (e.g. `dxora_link_analysis`).
-  2. Push the local commits:
-     ```bash
-     git remote add origin https://github.com/<your-username>/dxora_link_analysis.git
-     git branch -M main
-     git push -u origin main
-     ```
+- [x] **Public GitHub Repository**: [github.com/monikakunani/dxora_link_analysis](https://github.com/monikakunani/dxora_link_analysis)
 - [ ] **Public Deployment (Optional / Live Demo)**:
   - If deploying to Render, Railway, or Fly.io:
     - Set environment variable `GEMINI_API_KEY` in the hosting dashboard.
