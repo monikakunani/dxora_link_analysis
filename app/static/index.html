@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Link Analysis</title>
+<meta name="description" content="AI-powered website analysis: competitors, search queries, SEO, services and target audience.">
+<style>
+  :root {
+    --bg: #f6f7f9; --surface: #ffffff; --surface-2: #f0f2f5; --border: #e2e5ea;
+    --text: #16181d; --muted: #5d6470; --accent: #3b5bdb; --accent-ink: #ffffff;
+    --accent-soft: #e8edff; --good: #1f7a4d; --good-soft: #e3f4ea; --warn: #8a5a00; --warn-soft: #fff3d6;
+    --bad: #b42318; --bad-soft: #fdecea; --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --surface: #171a21; --surface-2: #1e222b; --border: #2a2f3a;
+      --text: #e8eaef; --muted: #9aa3b2; --accent: #7c95ff; --accent-ink: #0f1115;
+      --accent-soft: #232b4a; --good: #5cc98f; --good-soft: #17342a; --warn: #f2c063; --warn-soft: #3a2f14;
+      --bad: #ff8a80; --bad-soft: #3d1c1a; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  a { color: var(--accent); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+
+  header.top { border-bottom: 1px solid var(--border); background: var(--surface); }
+  header.top .wrap { display: flex; align-items: center; justify-content: space-between; height: 56px; }
+  .logo { font-weight: 700; letter-spacing: -.01em; display: flex; gap: 8px; align-items: center; }
+  .logo-mark { width: 22px; height: 22px; border-radius: 6px; background: var(--accent); }
+  .top nav a { font-size: 14px; text-decoration: none; margin-left: 18px; color: var(--muted); }
+  .top nav a:hover { color: var(--text); }
+  .top nav a.status-pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px;
+    background: var(--surface-2); font-weight: 500;
+  }
+  .sdot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .status-pill.ok { background: var(--good-soft); color: var(--good); }
+  .status-pill.ok .sdot { background: var(--good); }
+  .status-pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .status-pill.warn .sdot { background: var(--warn); }
+  .status-pill.down { background: var(--bad-soft); color: var(--bad); }
+  .status-pill.down .sdot { background: var(--bad); }
+
+  .hero { padding: 48px 0 28px; text-align: center; }
+  .hero h1 { font-size: clamp(26px, 4vw, 38px); line-height: 1.15; margin: 0 0 10px; letter-spacing: -.02em; }
+  .hero p { color: var(--muted); margin: 0 auto 26px; max-width: 620px; }
+
+  form.search {
+    display: flex; gap: 8px; max-width: 680px; margin: 0 auto;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    padding: 6px; box-shadow: var(--shadow);
+  }
+  form.search input {
+    flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text);
+    font: inherit; font-size: 16px; padding: 10px 12px;
+  }
+  button.primary {
+    border: 0; border-radius: 10px; background: var(--accent); color: var(--accent-ink);
+    font: inherit; font-weight: 600; padding: 10px 20px; cursor: pointer; white-space: nowrap;
+  }
+  button.primary:disabled { opacity: .6; cursor: progress; }
+  .examples { margin-top: 12px; font-size: 13px; color: var(--muted); }
+  .examples button {
+    border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+    border-radius: 999px; padding: 3px 10px; margin: 4px 2px; font: inherit; cursor: pointer;
+  }
+  .examples button:hover { color: var(--text); border-color: var(--muted); }
+
+  .status { max-width: 680px; margin: 24px auto 0; }
+  .loading {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px 20px; box-shadow: var(--shadow);
+  }
+  .steps { list-style: none; margin: 0; padding: 0; }
+  .steps li { display: flex; gap: 10px; align-items: center; padding: 5px 0; color: var(--muted); }
+  .steps li .dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border); flex: none; }
+  .steps li.active { color: var(--text); font-weight: 500; }
+  .steps li.active .dot { border-color: var(--accent); border-top-color: transparent; animation: spin .8s linear infinite; }
+  .steps li.done .dot { background: var(--good); border-color: var(--good); }
+  .elapsed { font-size: 13px; color: var(--muted); margin-top: 8px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .steps li.active .dot { animation: none; } }
+
+  .error {
+    background: var(--bad-soft); color: var(--bad); border-radius: var(--radius);
+    padding: 14px 18px; font-weight: 500;
+  }
+
+  #results { padding: 8px 0 64px; }
+  .brand-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px 24px; box-shadow: var(--shadow); margin-top: 28px;
+    display: flex; gap: 18px; justify-content: space-between; flex-wrap: wrap; align-items: flex-start;
+  }
+  .brand-card h2 { margin: 0 0 4px; font-size: 24px; letter-spacing: -.01em; }
+  .brand-card .site { font-size: 14px; color: var(--muted); word-break: break-all; }
+  .brand-card p { margin: 10px 0 0; max-width: 720px; }
+  .brand-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  button.ghost {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    border-radius: 8px; padding: 7px 12px; font: inherit; font-size: 13px; cursor: pointer;
+  }
+  button.ghost:hover { border-color: var(--muted); }
+
+  .tabs { display: flex; gap: 4px; margin: 22px 0 14px; overflow-x: auto; border-bottom: 1px solid var(--border); }
+  .tabs button {
+    border: 0; background: none; color: var(--muted); font: inherit; font-weight: 500;
+    padding: 10px 14px; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
+  }
+  .tabs button[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+  .tabs .num {
+    display: inline-block; width: 20px; height: 20px; line-height: 20px; border-radius: 50%;
+    background: var(--surface-2); font-size: 12px; text-align: center; margin-right: 6px;
+  }
+  .tabs button[aria-selected="true"] .num { background: var(--accent-soft); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 18px 20px; box-shadow: var(--shadow); margin-bottom: 14px;
+  }
+  .card h3 { margin: 0 0 10px; font-size: 16px; }
+  .card h4 { margin: 14px 0 6px; font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .grid .card { margin: 0; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  thead th { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 600; background: var(--surface-2); }
+  tbody th { font-weight: 600; color: var(--muted); white-space: nowrap; width: 1%; }
+  td.you { background: var(--accent-soft); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { background: var(--surface-2); border-radius: 999px; padding: 3px 10px; font-size: 13px; }
+  ul.clean { margin: 0; padding-left: 18px; }
+  ul.clean li { margin: 3px 0; }
+  .badge {
+    display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 999px;
+    text-transform: uppercase; letter-spacing: .03em; vertical-align: middle;
+  }
+  .badge.web { background: var(--good-soft); color: var(--good); }
+  .badge.ai { background: var(--warn-soft); color: var(--warn); }
+  .badge.plat { background: var(--accent-soft); color: var(--accent); }
+  .note { font-size: 13px; color: var(--muted); margin: 4px 0 14px; }
+  .kv { display: grid; grid-template-columns: 150px 1fr; gap: 6px 14px; font-size: 14px; }
+  .kv dt { color: var(--muted); }
+  .kv dd { margin: 0; }
+  .counter { font-size: 12px; color: var(--muted); margin-left: 6px; }
+  .counter.over { color: var(--bad); }
+  pre.json {
+    background: var(--surface-2); border-radius: 10px; padding: 14px; overflow: auto;
+    max-height: 520px; font-size: 12.5px; margin: 0;
+  }
+  footer { text-align: center; color: var(--muted); font-size: 13px; padding: 24px 0 40px; }
+  [hidden] { display: none !important; }
+
+  @media (max-width: 560px) {
+    .hero { padding-top: 32px; }
+    form.search { flex-direction: column; }
+    button.primary { width: 100%; }
+    .kv { grid-template-columns: 1fr; }
+    .kv dt { margin-top: 6px; }
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="logo"><span class="logo-mark" aria-hidden="true"></span>Link Analysis</div>
+    <nav><a href="/docs">API docs</a><a href="/health" class="status-pill" id="pill" title="Service status"><span class="sdot"></span><span id="pill-text">Checking…</span></a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <h1>Understand any business from its website</h1>
+    <p>Paste a link. We read the page and use AI to map competitors, search queries, SEO improvements, top services and target audience.</p>
+    <form class="search" id="form">
+      <input id="url" type="url" inputmode="url" placeholder="https://example.com" aria-label="Website URL" required autocomplete="url">
+      <button class="primary" id="go" type="submit">Analyze</button>
+    </form>
+    <div class="examples">Try:
+      <button type="button" data-url="https://stripe.com">stripe.com</button>
+      <button type="button" data-url="https://www.python.org">python.org</button>
+      <button type="button" data-url="https://www.shopify.com">shopify.com</button>
+    </div>
+  </section>
+
+  <div class="status" id="status" hidden></div>
+  <section id="results" hidden></section>
+</main>
+
+<footer>Competitors are AI-generated suggestions based on industry knowledge. No search volumes are invented.</footer>
+
+<script>
+(function () {
+  "use strict";
+  var form = document.getElementById("form");
+  var input = document.getElementById("url");
+  var go = document.getElementById("go");
+  var statusEl = document.getElementById("status");
+  var results = document.getElementById("results");
+  var lastData = null;
+
+  // ── Status pill (header) ──────────────────────────────────
+  var pill = document.getElementById("pill"), pillText = document.getElementById("pill-text");
+  async function checkHealth() {
+    try {
+      var r = await fetch("/health", { headers: { Accept: "application/json" }, cache: "no-store" });
+      var h = await r.json();
+      if (r.ok && h.status === "healthy") {
+        var keyOk = h.llm_api_key_configured !== false;
+        pill.className = "status-pill " + (keyOk ? "ok" : "warn");
+        pillText.textContent = keyOk ? "Online" : "AI key missing";
+      } else { pill.className = "status-pill down"; pillText.textContent = "Unhealthy"; }
+    } catch (e) { pill.className = "status-pill down"; pillText.textContent = "Offline"; }
+  }
+  checkHealth();
+  setInterval(checkHealth, 30000);
+
+  // Everything shown comes from a third-party website + an LLM: always escape.
+  function esc(v) {
+    return String(v == null ? "" : v)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function list(items) {
+    items = items || [];
+    if (!items.length) return '<p class="note">None identified.</p>';
+    return '<ul class="clean">' + items.map(function (i) { return "<li>" + esc(i) + "</li>"; }).join("") + "</ul>";
+  }
+  function chips(items) {
+    items = items || [];
+    if (!items.length) return '<p class="note">None identified.</p>';
+    return '<div class="chips">' + items.map(function (i) { return '<span class="chip">' + esc(i) + "</span>"; }).join("") + "</div>";
+  }
+  function counter(text, max) {
+    var n = (text || "").length;
+    return '<span class="counter' + (n > max ? " over" : "") + '">' + n + "/" + max + " chars</span>";
+  }
+
+  // ── Loading state ─────────────────────────────────────────
+  var STEPS = ["Checking the URL is safe", "Downloading the website", "Extracting the readable content", "AI is analysing the business", "Validating the report"];
+  var timer = null;
+  function showLoading() {
+    var start = Date.now();
+    statusEl.hidden = false;
+    statusEl.innerHTML = '<div class="loading" role="status" aria-live="polite"><ul class="steps">' +
+      STEPS.map(function (s) { return '<li><span class="dot"></span>' + s + "</li>"; }).join("") +
+      '</ul><div class="elapsed">0s elapsed · usually takes 5–20 seconds</div></div>';
+    var lis = statusEl.querySelectorAll(".steps li");
+    var elapsed = statusEl.querySelector(".elapsed");
+    // Approximate progress: the server does not stream step events.
+    var marks = [0, 0.6, 2, 3, 999];
+    function tick() {
+      var t = (Date.now() - start) / 1000;
+      var idx = 0;
+      for (var i = 0; i < marks.length; i++) if (t >= marks[i]) idx = i;
+      lis.forEach(function (li, i) { li.className = i < idx ? "done" : i === idx ? "active" : ""; });
+      elapsed.textContent = Math.floor(t) + "s elapsed · usually takes 5–20 seconds";
+    }
+    tick();
+    timer = setInterval(tick, 250);
+  }
+  function stopLoading() { clearInterval(timer); timer = null; }
+  function showError(msg) {
+    statusEl.hidden = false;
+    statusEl.innerHTML = '<div class="error" role="alert">' + esc(msg) + "</div>";
+  }
+
+  // ── Submit ────────────────────────────────────────────────
+  async function analyze(url) {
+    results.hidden = true;
+    go.disabled = true; go.textContent = "Analyzing…";
+    showLoading();
+    var t0 = performance.now();
+    try {
+      var res = await fetch("/link-analysis", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: url })
+      });
+      var data = await res.json().catch(function () { return {}; });
+      stopLoading();
+      if (!res.ok) {
+        var d = data && data.detail;
+        if (Array.isArray(d)) d = "Please enter a full, valid URL starting with http:// or https://";
+        showError(d || ("Request failed (HTTP " + res.status + ")"));
+        return;
+      }
+      statusEl.hidden = true;
+      lastData = data;
+      render(data, (performance.now() - t0) / 1000);
+    } catch (e) {
+      stopLoading();
+      showError("Could not reach the server. Is it running?");
+    } finally {
+      go.disabled = false; go.textContent = "Analyze";
+    }
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var url = input.value.trim();
+    if (url && !/^https?:\/\//i.test(url)) { url = "https://" + url; input.value = url; }
+    if (url) analyze(url);
+  });
+  document.querySelectorAll(".examples button").forEach(function (b) {
+    b.addEventListener("click", function () { input.value = b.dataset.url; analyze(b.dataset.url); });
+  });
+
+  // ── Render ────────────────────────────────────────────────
+  function render(d, secs) {
+    var a = d.analysis, ca = a.competitor_analysis, seo = a.seo_improvements, ta = a.target_audience;
+    var you = ca.your_brand || {};
+    var comps = ca.competitors || [];
+
+    var rows = [["Brand name", "name"], ["Main service", "main_service"], ["Target market", "target_market"],
+                ["Key strength", "key_strength"], ["Weakness / gap", "weakness_or_gap"], ["Opportunity", "opportunity"]];
+    var compTable =
+      '<div class="table-wrap"><table><thead><tr><th></th><th>Your brand</th>' +
+      comps.map(function (c) { return "<th>" + esc(c.name) + "</th>"; }).join("") + "</tr></thead><tbody>" +
+      rows.map(function (r) {
+        var yourVal = r[1] === "name" ? (you.name || d.brand.name) : r[1] === "weakness_or_gap" ? "—" : you[r[1]];
+        return "<tr><th>" + r[0] + '</th><td class="you">' + esc(yourVal || "—") + "</td>" +
+          comps.map(function (c) { return "<td>" + esc(c[r[1]]) + "</td>"; }).join("") + "</tr>";
+      }).join("") +
+      '<tr><th>Source</th><td class="you"><span class="badge web">website</span></td>' +
+      comps.map(function (c) {
+        var web = c.competitor_source === "website";
+        return '<td><span class="badge ' + (web ? "web" : "ai") + '">' + (web ? "website" : "AI suggestion") + "</span></td>";
+      }).join("") + "</tr></tbody></table></div>";
+
+    var s1 =
+      '<div class="card"><h3>Your brand vs competitors</h3>' +
+      '<p class="note">Competitors are AI-identified from industry knowledge, not scraped market data.</p>' + compTable + "</div>" +
+      '<div class="grid">' +
+        '<div class="card"><h3>Brand overview</h3><p style="margin:0">' + esc(ca.brand_overview) + "</p>" +
+          "<h4>Category</h4>" + esc(ca.business_category) +
+          "<h4>Main products &amp; services</h4>" + chips(ca.main_products_services) + "</div>" +
+        '<div class="card"><h3>Competitive advantages</h3>' + list(ca.brand_strengths) + "</div>" +
+        '<div class="card"><h3>Positioning opportunities</h3>' + list(ca.opportunities) + "</div>" +
+      "</div>";
+
+    var s2 =
+      '<div class="card"><h3>Top 5 target search queries</h3>' +
+      '<p class="note">Suggested queries only. No search volumes are shown because none were measured.</p>' +
+      '<div class="table-wrap"><table><thead><tr><th>Platform</th><th>Search query</th><th>Intent</th><th>Who searches</th><th>Why it matters</th></tr></thead><tbody>' +
+      (a.target_search_queries || []).map(function (q) {
+        return '<tr><td>' + (q.platforms || []).map(function (p) { return '<span class="badge plat">' + esc(p) + "</span>"; }).join(" ") +
+          "</td><td><strong>" + esc(q.query) + "</strong></td><td>" + esc(q.intent) + "</td><td>" + esc(q.target_audience) +
+          "</td><td>" + esc(q.business_relevance) + "</td></tr>";
+      }).join("") + "</tbody></table></div></div>";
+
+    var s3 =
+      '<div class="grid">' +
+        '<div class="card"><h3>Keywords</h3>' +
+          "<h4>Primary</h4><span class=\"chip\" style=\"background:var(--accent-soft);color:var(--accent);font-weight:600\">" + esc(seo.primary_keyword) + "</span>" +
+          "<h4>Secondary</h4>" + chips(seo.secondary_keywords) +
+          "<h4>Long-tail</h4>" + chips(seo.long_tail_keywords) +
+          "<h4>Business</h4>" + chips(seo.business_keywords) + "</div>" +
+        '<div class="card"><h3>Search result preview</h3>' +
+          "<h4>SEO title " + counter(seo.recommended_title, 60) + "</h4><strong>" + esc(seo.recommended_title) + "</strong>" +
+          '<p class="note" style="margin-top:6px">' + esc(seo.title_structure_notes) + "</p>" +
+          "<h4>Meta description " + counter(seo.meta_description, 160) + "</h4>" + esc(seo.meta_description) +
+          "<h4>Meta keywords</h4>" + chips(seo.meta_keywords) +
+          "<h4>Business summary</h4>" + esc(seo.business_summary) + "</div>" +
+      "</div>" +
+      '<div class="card" style="margin-top:14px"><h3>Supporting content ideas</h3><div class="table-wrap"><table><thead><tr><th>Type</th><th>Title</th><th>Description</th><th>Target keyword</th></tr></thead><tbody>' +
+      (seo.supporting_content || []).map(function (c) {
+        return "<tr><td>" + esc(c.content_type) + "</td><td><strong>" + esc(c.title) + "</strong></td><td>" + esc(c.description) + "</td><td>" + esc(c.target_keyword) + "</td></tr>";
+      }).join("") + "</tbody></table></div></div>";
+
+    var s4 =
+      '<p class="note"><span class="badge web">website</span> found on the page · <span class="badge ai">inferred</span> AI recommendation</p>' +
+      '<div class="grid">' +
+      (a.top_services || []).map(function (s, i) {
+        var web = s.source === "website";
+        return '<div class="card"><h3>' + (i + 1) + ". " + esc(s.service_name) + ' <span class="badge ' + (web ? "web" : "ai") + '">' + (web ? "website" : "inferred") + "</span></h3>" +
+          '<p style="margin:0 0 10px">' + esc(s.description) + "</p>" +
+          '<dl class="kv"><dt>Industry</dt><dd>' + esc(s.target_industry) + "</dd><dt>Customer</dt><dd>" + esc(s.target_customer) +
+          "</dd><dt>Main benefit</dt><dd>" + esc(s.main_benefit) + "</dd></dl></div>";
+      }).join("") + "</div>";
+
+    function segTable(title, segs) {
+      return '<div class="card"><h3>' + title + "</h3>" + (segs && segs.length
+        ? '<div class="table-wrap"><table><thead><tr><th>Audience</th><th>Business type</th><th>Requirement</th></tr></thead><tbody>' +
+          segs.map(function (s) { return "<tr><td><strong>" + esc(s.audience_name) + "</strong></td><td>" + esc(s.business_type) + "</td><td>" + esc(s.requirement) + "</td></tr>"; }).join("") +
+          "</tbody></table></div>"
+        : '<p class="note">None identified.</p>') + "</div>";
+    }
+    var s5 =
+      segTable("Primary audience", ta.primary_audience) +
+      segTable("Secondary audience", ta.secondary_audience) +
+      '<div class="grid">' +
+        '<div class="card"><h3>Industries</h3>' + chips(ta.industries) + "<h4>Business types</h4>" + chips(ta.business_types) +
+          "<h4>Geographical focus</h4>" + esc(ta.geographical_focus || "Not specified on the website") + "</div>" +
+        '<div class="card"><h3>Customer profiles</h3>' + list(ta.customer_profiles) + "</div>" +
+        '<div class="card"><h3>Needs &amp; challenges</h3>' + list(ta.customer_needs) + "</div>" +
+        '<div class="card"><h3>Interests</h3>' + chips(ta.customer_interests) + "<h4>Recommended marketing segments</h4>" + list(ta.recommended_segments) + "</div>" +
+      "</div>";
+
+    var tabs = [["Competitors", s1], ["Search queries", s2], ["SEO", s3], ["Top services", s4], ["Audience", s5],
+                ["Raw JSON", '<div class="card"><pre class="json">' + esc(JSON.stringify(d, null, 2)) + "</pre></div>"]];
+
+    results.innerHTML =
+      '<div class="brand-card"><div><h2>' + esc(d.brand.name) + '</h2><div class="site">' + esc(d.brand.category) + " · " + esc(d.website) +
+      "</div><p>" + esc(d.brand.summary) + '</p></div><div class="brand-actions">' +
+      '<button class="ghost" id="copy" type="button">Copy JSON</button><button class="ghost" id="dl" type="button">Download JSON</button></div></div>' +
+      '<p class="note" style="margin-top:8px">Completed in ' + secs.toFixed(1) + "s" + (secs < 1 ? " (served from cache)" : "") + "</p>" +
+      '<div class="tabs" role="tablist">' + tabs.map(function (t, i) {
+        return '<button role="tab" type="button" aria-selected="' + (i === 0) + '" data-i="' + i + '">' + (i < 5 ? '<span class="num">' + (i + 1) + "</span>" : "") + t[0] + "</button>";
+      }).join("") + "</div>" +
+      tabs.map(function (t, i) { return '<div class="panel' + (i === 0 ? " active" : "") + '" role="tabpanel">' + t[1] + "</div>"; }).join("");
+
+    results.hidden = false;
+    var tabBtns = results.querySelectorAll(".tabs button"), panels = results.querySelectorAll(".panel");
+    tabBtns.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var i = +b.dataset.i;
+        tabBtns.forEach(function (x, j) { x.setAttribute("aria-selected", String(j === i)); });
+        panels.forEach(function (p, j) { p.classList.toggle("active", j === i); });
+      });
+    });
+    document.getElementById("copy").addEventListener("click", function (e) {
+      var btn = e.currentTarget;
+      navigator.clipboard.writeText(JSON.stringify(lastData, null, 2)).then(function () {
+        btn.textContent = "Copied!"; setTimeout(function () { btn.textContent = "Copy JSON"; }, 1500);
+      });
+    });
+    document.getElementById("dl").addEventListener("click", function () {
+      var blob = new Blob([JSON.stringify(lastData, null, 2)], { type: "application/json" });
+      var link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = (d.brand.name || "analysis").replace(/[^a-z0-9]+/gi, "-").toLowerCase() + "-analysis.json";
+      link.click();
+      URL.revokeObjectURL(link.href);
+    });
+    results.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+})();
+</script>
+</body>
+</html>

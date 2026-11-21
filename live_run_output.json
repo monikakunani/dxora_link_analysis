@@ -3,103 +3,110 @@
   "website": "https://stripe.com",
   "brand": {
     "name": "Stripe",
-    "category": "Financial Infrastructure / Payment Processing",
-    "summary": "Stripe is a comprehensive financial services platform that enables businesses of all sizes to accept online and in-person payments, build flexible billing models, and manage global money movement. It provides scalable developer tools, anti-fraud protection, and embedded financial infrastructure for startups and global enterprises."
+    "category": "Financial Services & Payment Infrastructure",
+    "summary": "Stripe is a financial services platform that provides payment processing, custom billing models, and financial infrastructure for businesses of all sizes, from startups to global enterprises."
   },
   "analysis": {
     "competitor_analysis": {
-      "brand_overview": "Stripe is a market leader in online payment processing and financial infrastructure, offering modular solutions for billing, card issuing, fraud prevention, and cross-border commerce.",
-      "business_category": "Financial Services & Payment Gateway",
+      "brand_overview": "Stripe provides comprehensive financial infrastructure, payment processing, fraud prevention, and billing tools designed for online and in-person commerce.",
+      "business_category": "Financial Services & Payment Processing",
       "main_products_services": [
-        "Payment Processing",
-        "Stripe Billing",
-        "Stripe Connect",
-        "Stripe Radar",
-        "Stripe Issuing"
+        "Online and in-person payment processing",
+        "Flexible billing and subscription management",
+        "Fraud prevention and risk management",
+        "Card issuing programs",
+        "Embedded financial services for platforms"
       ],
+      "your_brand": {
+        "name": "Stripe",
+        "main_service": "Global payment processing and financial infrastructure",
+        "target_market": "Businesses of all sizes, from startups to Fortune 100 enterprises",
+        "key_strength": "Robust developer-friendly APIs, high reliability, and extensive global reach",
+        "opportunity": "Expanding deeper into AI-powered agentic commerce and crypto/stablecoin payments"
+      },
       "competitors": [
         {
           "name": "PayPal",
-          "main_service": "Online checkout and digital wallet payments",
-          "target_market": "Consumers and merchants of all sizes",
-          "key_strength": "High brand recognition and consumer trust",
-          "weakness_or_gap": "Less developer-friendly customization compared to modern infrastructure providers",
-          "opportunity": "Target businesses seeking deeply embedded, highly customizable checkout experiences.",
+          "main_service": "Online payment processing and digital wallet services",
+          "target_market": "Consumers and merchants of all sizes globally",
+          "key_strength": "High brand recognition and massive consumer wallet base",
+          "weakness_or_gap": "Less developer-centric and customizable than modern API-first alternatives",
+          "opportunity": "Capture enterprise developers looking for advanced customization and no-code tools",
           "competitor_source": "AI-identified based on industry knowledge"
         },
         {
           "name": "Adyen",
-          "main_service": "Global payment processing for enterprise retail",
-          "target_market": "Large global enterprises and omnichannel brands",
-          "key_strength": "Unified single-platform architecture for online and in-person commerce",
-          "weakness_or_gap": "Higher barrier to entry for smaller startups and early-stage companies",
-          "opportunity": "Capture fast-growing startups before they scale into enterprise solutions.",
+          "main_service": "Global payment platform for enterprise businesses",
+          "target_market": "Large enterprise retailers and global brands",
+          "key_strength": "Unified single-platform architecture for online and in-store payments worldwide",
+          "weakness_or_gap": "Less optimized for early-stage startups and small businesses",
+          "opportunity": "Target high-growth startups before they reach enterprise scale",
           "competitor_source": "AI-identified based on industry knowledge"
         },
         {
           "name": "Square",
-          "main_service": "Point-of-sale (POS) hardware and integrated payments",
-          "target_market": "Small businesses, brick-and-mortar retail, and service providers",
-          "key_strength": "Seamless hardware and software integration for physical storefronts",
-          "weakness_or_gap": "Less tailored for complex developer-led SaaS business models",
-          "opportunity": "Expand hybrid online-offline toolkits for modern SMBs.",
+          "main_service": "Point-of-sale hardware and software for small businesses",
+          "target_market": "Small and medium-sized local businesses, retail, and food service",
+          "key_strength": "Strong ecosystem of physical hardware and integrated POS solutions",
+          "weakness_or_gap": "Less suitable for complex, high-volume software platforms and global online SaaS billing",
+          "opportunity": "Provide hybrid online-offline solutions for growing retail brands",
           "competitor_source": "AI-identified based on industry knowledge"
         }
       ],
       "brand_strengths": [
-        "Extensible, highly reliable developer APIs with 99.999% uptime",
-        "Comprehensive product ecosystem covering billing, fraud detection, and crypto/stablecoins"
+        "Developer-first ecosystem with rich APIs and documentation",
+        "Massive global scale processing trillions in volume with high uptime"
       ],
       "opportunities": [
-        "Capitalize on agentic commerce and AI platform integration protocols",
-        "Expand cross-border stablecoin and crypto payment adoption"
+        "Capitalize on emerging stablecoin and crypto payment methods",
+        "Integrate commerce capabilities directly into AI platforms"
       ]
     },
     "target_search_queries": [
       {
-        "query": "best payment gateway for global business",
+        "query": "how to accept online payments for ecommerce",
         "platforms": [
           "Google"
         ],
         "intent": "Service Search",
-        "business_relevance": "Captures businesses searching for scalable international payment infrastructure.",
-        "target_audience": "Founders, CFOs, and ecommerce managers"
+        "business_relevance": "Directly targets merchants looking for payment gateway solutions.",
+        "target_audience": "Small business owners and ecommerce founders"
       },
       {
-        "query": "how to integrate online payments on website",
+        "query": "best payment gateway for growing SaaS businesses",
         "platforms": [
           "Facebook"
         ],
         "intent": "Business Discovery",
-        "business_relevance": "Engages SMB owners looking for straightforward payment setup guides.",
-        "target_audience": "Small business owners and entrepreneurs"
+        "business_relevance": "Captures business owners seeking subscription billing infrastructure.",
+        "target_audience": "Startup founders and SaaS operators"
       },
       {
-        "query": "subscription billing software for saas",
+        "query": "how to implement usage-based billing models",
         "platforms": [
           "Instagram"
         ],
         "intent": "Inspiration",
-        "business_relevance": "Connects with SaaS founders seeking flexible monetization models.",
-        "target_audience": "SaaS developers and startup founders"
+        "business_relevance": "Highlights modern billing features offered by the platform.",
+        "target_audience": "Product managers and developers"
       },
       {
-        "query": "embedded financial infrastructure for platforms",
+        "query": "embedded financial services for software platforms",
         "platforms": [
           "LinkedIn"
         ],
         "intent": "B2B Search",
-        "business_relevance": "Targets enterprise decision-makers and platform architects looking for embedded fintech solutions.",
-        "target_audience": "Product Managers, CTOs, and Enterprise Executives"
+        "business_relevance": "Targets platform leaders looking to monetize transactions.",
+        "target_audience": "Platform executives and fintech product leads"
       },
       {
-        "query": "fraud prevention tools for online payments",
+        "query": "accept crypto and stablecoin payments at checkout",
         "platforms": [
           "X"
         ],
         "intent": "Service Discovery",
-        "business_relevance": "Attracts technical buyers looking to solve transaction fraud and card testing.",
-        "target_audience": "Engineering leads and risk officers"
+        "business_relevance": "Aligns with cutting-edge crypto payment integrations.",
+        "target_audience": "Tech-forward merchants and crypto enthusiasts"
       }
     ],
     "seo_improvements": {
@@ -109,84 +116,82 @@
         "online payments"
       ],
       "long_tail_keywords": [
-        "accept payments globally online and in person",
-        "embed financial services into platform"
+        "accept payments globally online",
+        "custom revenue models for SaaS"
       ],
       "business_keywords": [
-        "stripe billing",
-        "card issuing API"
+        "billing models",
+        "fraud prevention"
       ],
       "recommended_title": "Stripe | Financial Infrastructure to Grow Your Revenue",
       "title_primary_keyword": "financial infrastructure",
-      "title_structure_notes": "Brand name first followed by core value proposition for high click-through rates.",
-      "meta_description": "Accept payments, build flexible billing models, and manage money movement globally with Stripe's complete financial infrastructure platform.",
-      "business_summary": "Stripe provides modular financial services and payment infrastructure helping businesses accept transactions worldwide.",
+      "title_structure_notes": "Brand name followed by value proposition containing primary keyword.",
+      "meta_description": "Stripe is a financial services platform that helps all types of businesses accept payments, build flexible billing models and manage money movement.",
+      "business_summary": "Financial platform for global commerce, payments, and revenue management.",
       "meta_keywords": [
-        "payment gateway",
-        "financial services",
-        "billing software",
-        "payment processing API"
+        "payments",
+        "financial services"
       ],
       "supporting_content": [
         {
-          "content_type": "blog post",
-          "title": "Navigating Global Payments: A Guide for Modern Enterprises",
-          "description": "Learn how leading brands unify online and in-store commerce across 135+ currencies.",
-          "target_keyword": "global payment processing"
+          "content_type": "landing page",
+          "title": "Stripe for Startups: Scale Your Business Fast",
+          "description": "Discover tools and resources designed to help early-stage startups incorporate, fundraise, and accept payments.",
+          "target_keyword": "startup payment infrastructure"
         },
         {
-          "content_type": "landing page",
-          "title": "Embedded Finance Solutions for Vertical SaaS",
-          "description": "Discover how software platforms monetize transactions and launch new revenue streams.",
-          "target_keyword": "embedded financial services"
+          "content_type": "blog post",
+          "title": "The Future of Agentic Commerce and AI Payments",
+          "description": "Learn how businesses can make their products shoppable through AI platforms using new protocols.",
+          "target_keyword": "AI payments commerce"
         },
         {
           "content_type": "FAQ",
-          "title": "Stripe Integration and API Documentation Guide",
-          "description": "Answers to common questions about connecting APIs, no-code setups, and developer SDKs.",
-          "target_keyword": "payment API documentation"
+          "title": "Stripe Billing and Subscription Management FAQ",
+          "description": "Answers to common questions about setting up flexible billing models, invoicing, and usage-based pricing.",
+          "target_keyword": "subscription billing models"
         }
       ]
     },
     "top_services": [
       {
         "service_name": "Online and In-Person Payment Processing",
-        "description": "Accept payments globally across 135+ currencies with optimized checkout flows.",
+        "description": "Accept payments globally across online checkouts, in-person terminals, and digital wallets.",
         "target_industry": "Retail & Ecommerce",
         "target_customer": "Businesses of all sizes",
-        "main_benefit": "Higher authorization rates and unified commerce",
+        "main_benefit": "Optimized conversion rates and global payment method support.",
         "source": "website"
       },
       {
-        "service_name": "Stripe Billing",
-        "description": "Enable recurring billing, usage-based pricing, and flexible subscription models.",
-        "target_industry": "SaaS & Subscriptions",
-        "target_customer": "Software platforms and digital creators",
-        "main_benefit": "Automated revenue collection and reduced churn",
+        "service_name": "Flexible Billing and Subscriptions",
+        "description": "Enable any billing model including recurring subscriptions and usage-based pricing.",
+        "target_industry": "SaaS & Software",
+        "target_customer": "Subscription-based businesses",
+        "main_benefit": "Automated revenue collection and reduced churn.",
         "source": "website"
       },
       {
-        "service_name": "Stripe Radar",
-        "description": "Stop fraud using machine learning trained on data from millions of global companies.",
-        "target_industry": "Financial Technology",
+        "service_name": "Fraud and Risk Management",
+        "description": "Stop fraud, card testing, and bot abuse without halting legitimate growth.",
+        "target_industry": "Financial Services & Commerce",
         "target_customer": "Online merchants",
-        "main_benefit": "Zero friction for genuine customers while blocking bad actors",
+        "main_benefit": "Advanced machine learning risk profiling.",
         "source": "website"
       },
       {
-        "service_name": "Stripe Connect",
-        "description": "Embed payments directly into your software platform to monetize transactions.",
-        "target_industry": "Vertical SaaS & Marketplaces",
-        "target_customer": "Platform builders and marketplace operators",
-        "main_benefit": "New revenue streams and simplified multi-party payouts",
+        "service_name": "Embedded Financial Services for Platforms",
+        "description": "Embed payments and financial services directly into vertical SaaS platforms.",
+        "target_industry": "Vertical SaaS",
+        "target_customer": "Software platform operators",
+        "main_benefit": "New revenue streams through monetized platform transactions.",
         "source": "website"
       },
       {
-        "service_name": "Professional Implementation Services",
-        "description": "Tailored expert guidance on complex technical migrations, custom integrations, and architecture.",
-        "target_industry": "Enterprise",
-        "target_customer": "Large enterprises and fast-growing startups",
-        "main_benefit": "Faster time-to-market and minimized integration risk",
+        "service_name": "Custom Card Issuing",
+        "description": "Create, manage, and distribute physical and virtual corporate payment cards.",
+        "target_industry": "Fintech & Enterprise",
+        "target_customer": "Growing enterprises and fintechs",
+        "main_benefit": "Full control over card spending limits and branding.",
         "source": "website"
       }
     ],
@@ -194,62 +199,75 @@
       "primary_audience": [
         {
           "audience_name": "Startup Founders",
-          "business_type": "Tech Startup",
-          "requirement": "Fast incorporation, fund-raising tools, and scalable payment setup"
+          "business_type": "Early-stage startup",
+          "requirement": "Fast setup, incorporation, and foundational payment acceptance."
         },
         {
-          "audience_name": "Enterprise CTOs",
-          "business_type": "Global Enterprise",
-          "requirement": "High-uptime, reliable API infrastructure and multi-processor orchestration"
+          "audience_name": "Enterprise Product Managers",
+          "business_type": "Fortune 500 / Enterprise",
+          "requirement": "Reliable global commerce orchestration and custom workflows."
         }
       ],
       "secondary_audience": [
         {
-          "audience_name": "SaaS Product Managers",
-          "business_type": "Software Platform",
-          "requirement": "Embedded payments and recurring billing engines"
+          "audience_name": "Platform Operators",
+          "business_type": "Vertical SaaS",
+          "requirement": "Embedded payments and multi-party money movement."
         },
         {
-          "audience_name": "Small Business Owners",
-          "business_type": "Retail / Service",
-          "requirement": "No-code payment links and easy point-of-sale setup"
+          "audience_name": "Developers",
+          "business_type": "Technology",
+          "requirement": "Robust APIs, SDKs, and clean technical documentation."
         }
       ],
       "industries": [
-        "Ecommerce & Retail",
-        "SaaS & Software",
-        "AI & Tech Platforms",
-        "Digital Content Creation"
+        "Ecommerce",
+        "SaaS",
+        "Retail",
+        "Artificial Intelligence",
+        "Financial Services"
+      ],
+      "business_types": [
+        "Startups",
+        "SMBs",
+        "Vertical SaaS Platforms",
+        "Fortune 100 Enterprises"
+      ],
+      "customer_profiles": [
+        "Tech-savvy startup founders building global software and SaaS products",
+        "Enterprise directors of finance looking to unify online and in-store commerce"
       ],
       "customer_needs": [
-        "Secure global transaction processing",
-        "Fraud mitigation without conversion drop-off",
-        "Flexible subscription and usage-based billing"
+        "Secure payment processing",
+        "Global currency support",
+        "Automated recurring billing",
+        "Low operational overhead"
       ],
       "geographical_focus": null,
       "customer_interests": [
-        "Fintech innovation",
-        "Crypto and stablecoin transactions",
-        "Automated financial operations"
+        "Financial technology",
+        "Business growth",
+        "AI integration",
+        "International expansion"
       ],
       "recommended_segments": [
-        "Early-stage tech startups",
-        "Omnichannel enterprise retailers",
-        "Vertical SaaS platforms"
+        "High-growth AI startups",
+        "Global enterprise retailers",
+        "B2B SaaS platforms"
       ]
     }
   },
   "_benchmark_metadata": {
     "target_url": "https://stripe.com",
-    "raw_html_bytes": 724310,
-    "raw_html_chars": 723039,
-    "cleaned_text_chars": 45489,
-    "content_reduction_percent": 93.71,
-    "cold_run_seconds": 76.886,
-    "warm_cache_hit_ms": 1.746,
-    "prompt_tokens": 11669,
-    "candidates_tokens": 2326,
-    "total_tokens": 13995,
-    "estimated_cost_usd": 0.009316
+    "raw_html_bytes": 729197,
+    "raw_html_chars": 727926,
+    "cleaned_text_chars": 7589,
+    "content_reduction_percent": 98.96,
+    "cold_run_seconds": 8.602,
+    "warm_cache_hit_ms": 0.217,
+    "prompt_tokens": 3906,
+    "candidates_tokens": 2482,
+    "total_tokens": 6388,
+    "estimated_cost_usd": 0.007377
   }
 }

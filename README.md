@@ -101,12 +101,15 @@ dxora_link_analysis/
 │   │   ├── analysis_service.py    # Pipeline orchestration & count enforcement
 │   │   ├── cache_service.py       # TTL-based in-memory response cache
 │   │   └── competitor_service.py  # Architectural hook for external competitor APIs
+│   ├── static/
+│   │   ├── index.html             # Web UI: analyze a URL, browse the 5 sections in tabs
+│   │   └── health.html            # Human-readable service status page
 │   └── utils/
 │       ├── __init__.py
 │       └── validators.py          # Multi-layer SSRF prevention & URL sanitization
 ├── tests/
 │   ├── __init__.py
-│   └── test_link_analysis.py      # Full test suite (26/26 tests passing)
+│   └── test_link_analysis.py      # Full test suite (32/32 tests passing)
 ├── live_test.py                   # Script for live end-to-end verification
 ├── live_run_output.json           # Tracked raw JSON response with benchmark metadata
 ├── live_run.log                   # Tracked console execution log of real Gemini run
@@ -125,7 +128,7 @@ dxora_link_analysis/
 
 ### Prerequisites
 
-- **Python 3.10+** (tested on Python 3.13)
+- **Python 3.10 – 3.13** (tested on Python 3.13; the pinned `pydantic-core` has no wheel for 3.15 yet)
 - **Google Gemini API Key** – Obtainable from [Google AI Studio](https://aistudio.google.com/apikey)
 
 ### Steps
@@ -179,6 +182,15 @@ uvicorn app.main:app --host 0.0.0.0 --port 4000 --reload
 
 The server will be reachable at `http://localhost:4000`.
 
+| URL | What it is |
+|---|---|
+| [`/`](http://localhost:4000/) | **Web UI**: paste a website URL and browse the five sections as tables and cards (tabs for Competitors, Search queries, SEO, Top services, Audience, and Raw JSON with copy/download) |
+| [`/link-analysis`](http://localhost:4000/docs#/Analysis) | The REST endpoint (`POST`, JSON in/out) |
+| [`/docs`](http://localhost:4000/docs) | Swagger UI for trying the API directly |
+| [`/health`](http://localhost:4000/health) | Service status. Browsers get a status page (server online, AI key configured, model, uptime, cache size, response time; auto-refreshes). Monitoring tools, `curl` and the Docker `HEALTHCHECK` get JSON. The API key itself is never exposed. |
+
+The web UI is a single dependency-free HTML file ([`app/static/index.html`](app/static/index.html)) that calls the same `POST /link-analysis` endpoint. All text from the analyzed site and the LLM is HTML-escaped before rendering.
+
 ### Docker Deployment
 
 Build and run the self-contained container:
@@ -188,7 +200,9 @@ docker build -t dxora-link-analysis .
 docker run --rm -p 4000:4000 --env-file .env dxora-link-analysis
 ```
 
-The container runs as an unprivileged non-root user (`app`), incorporates an automated Docker health check against `GET /`, and excludes local environment secrets via `.dockerignore`.
+The container listens on `$PORT` (default `4000`), so it runs unchanged on Render, Railway, Fly.io or Cloud Run, which inject their own port. Verified locally: built the image, ran it with `PORT=8080`, completed a live analysis, confirmed the SSRF block, and Docker's `HEALTHCHECK` reported `healthy`.
+
+The container runs as an unprivileged non-root user (`app`), incorporates an automated Docker health check against `GET /health`, and excludes local environment secrets via `.dockerignore`.
 
 ---
 
@@ -213,15 +227,15 @@ Both execution artifacts are checked into the repository:
 
 | Metric | Measured Value | Measurement Basis |
 |---|---|---|
-| **Raw HTML Downloaded** | **724,310 bytes** (723,039 chars) | Live stream from `https://stripe.com` |
-| **Cleaned Text Extracted** | **45,489 chars** | Post-BeautifulSoup script/style/SVG removal |
-| **Content Reduction** | **93.7% reduction** | `(1 - 45,489 / 723,039) * 100` |
-| **Gemini Prompt Tokens** | **11,669 tokens** | Reported by Gemini `usageMetadata.promptTokenCount` |
-| **Gemini Output Tokens** | **2,326 tokens** | Reported by Gemini `usageMetadata.candidatesTokenCount` |
-| **Gemini Total Tokens** | **13,995 tokens** | Reported by Gemini `usageMetadata.totalTokenCount` |
-| **Calculated Inference Cost** | **$0.009316 USD** | Standard Gemini rates: `(11,669 * $0.30 + 2,326 * $2.50) / 1,000,000` |
-| **Cold Run Latency** | **76.89s** | Includes 724 KB download + 2 transient 503 backoff retries (3s + 6s) + LLM inference |
-| **Warm Cache Hit Latency** | **1.746 ms (0.0017s)** | Measured on repeat request to `AnalysisService.analyze()` |
+| **Raw HTML Downloaded** | **729,197 bytes** (727,926 chars) | Live stream from `https://stripe.com` |
+| **Cleaned Text Extracted** | **7,589 chars** | Script/style/SVG removal + leaf-block extraction (no nested-wrapper duplication) |
+| **Content Reduction** | **99.0% reduction** | `(1 - 7,589 / 727,926) * 100` |
+| **Gemini Prompt Tokens** | **3,906 tokens** | Reported by Gemini `usageMetadata.promptTokenCount` |
+| **Gemini Output Tokens** | **2,482 tokens** | Reported by Gemini `usageMetadata.candidatesTokenCount` |
+| **Gemini Total Tokens** | **6,388 tokens** | Reported by Gemini `usageMetadata.totalTokenCount` |
+| **Calculated Inference Cost** | **$0.007377 USD** | Standard Gemini rates: `(3,906 * $0.30 + 2,482 * $2.50) / 1,000,000` |
+| **Cold Run Latency** | **8.60s** | 729 KB download + extraction + one Gemini call (no retries needed on this run) |
+| **Warm Cache Hit Latency** | **0.217 ms (0.0002s)** | Measured on repeat request to `AnalysisService.analyze()` |
 | **Cache Output Parity** | **Identical (PASSED)** | Deep comparison of cold vs warm Pydantic response dictionaries |
 
 ---
@@ -244,214 +258,257 @@ curl -X POST http://localhost:4000/link-analysis \
   "website": "https://stripe.com",
   "brand": {
     "name": "Stripe",
-    "category": "Financial Infrastructure / Payment Processing",
-    "summary": "Stripe is a comprehensive financial services platform that enables businesses of all sizes to accept online and in-person payments, build flexible billing models, and manage global money movement."
+    "category": "Financial Services & Payment Infrastructure",
+    "summary": "Stripe is a financial services platform that provides payment processing, custom billing models, and financial infrastructure for businesses of all sizes, from startups to global enterprises."
   },
   "analysis": {
     "competitor_analysis": {
-      "brand_overview": "Stripe is a leading financial infrastructure platform offering global payment processing, billing models, and financial tools for online and in-person commerce.",
-      "business_category": "Financial Infrastructure / Payment Processing",
+      "brand_overview": "Stripe provides comprehensive financial infrastructure, payment processing, fraud prevention, and billing tools designed for online and in-person commerce.",
+      "business_category": "Financial Services & Payment Processing",
       "main_products_services": [
-        "Online and In-Person Payments",
-        "Subscription Billing",
-        "Fraud Prevention",
-        "Card Issuing",
-        "Embedded Payments for Platforms"
+        "Online and in-person payment processing",
+        "Flexible billing and subscription management",
+        "Fraud prevention and risk management",
+        "Card issuing programs",
+        "Embedded financial services for platforms"
       ],
+      "your_brand": {
+        "name": "Stripe",
+        "main_service": "Global payment processing and financial infrastructure",
+        "target_market": "Businesses of all sizes, from startups to Fortune 100 enterprises",
+        "key_strength": "Robust developer-friendly APIs, high reliability, and extensive global reach",
+        "opportunity": "Expanding deeper into AI-powered agentic commerce and crypto/stablecoin payments"
+      },
       "competitors": [
         {
           "name": "PayPal",
-          "main_service": "Digital wallet and online payment processing",
-          "target_market": "Consumers and merchants of all sizes",
-          "key_strength": "High brand recognition and consumer trust",
-          "weakness_or_gap": "Less developer-centric customization compared to Stripe",
-          "opportunity": "Target businesses seeking deeply embedded, highly customizable checkout experiences.",
+          "main_service": "Online payment processing and digital wallet services",
+          "target_market": "Consumers and merchants of all sizes globally",
+          "key_strength": "High brand recognition and massive consumer wallet base",
+          "weakness_or_gap": "Less developer-centric and customizable than modern API-first alternatives",
+          "opportunity": "Capture enterprise developers looking for advanced customization and no-code tools",
           "competitor_source": "AI-identified based on industry knowledge"
         },
         {
           "name": "Adyen",
-          "main_service": "Global payment gateway and acquiring services",
-          "target_market": "Large enterprise and global brands",
-          "key_strength": "Unified single-platform architecture for online and in-person commerce",
-          "weakness_or_gap": "Higher barrier to entry for smaller startups and SMBs",
-          "opportunity": "Capture fast-growing startups before they scale into enterprise solutions.",
+          "main_service": "Global payment platform for enterprise businesses",
+          "target_market": "Large enterprise retailers and global brands",
+          "key_strength": "Unified single-platform architecture for online and in-store payments worldwide",
+          "weakness_or_gap": "Less optimized for early-stage startups and small businesses",
+          "opportunity": "Target high-growth startups before they reach enterprise scale",
           "competitor_source": "AI-identified based on industry knowledge"
         },
         {
           "name": "Square",
-          "main_service": "POS hardware and integrated payment solutions",
-          "target_market": "Small to medium brick-and-mortar businesses",
-          "key_strength": "Seamless hardware and software integration for physical storefronts",
-          "weakness_or_gap": "Historically less optimized for complex enterprise SaaS and global developer stacks",
-          "opportunity": "Expand hybrid online-offline toolkits for modern SMBs.",
+          "main_service": "Point-of-sale hardware and software for small businesses",
+          "target_market": "Small and medium-sized local businesses, retail, and food service",
+          "key_strength": "Strong ecosystem of physical hardware and integrated POS solutions",
+          "weakness_or_gap": "Less suitable for complex, high-volume software platforms and global online SaaS billing",
+          "opportunity": "Provide hybrid online-offline solutions for growing retail brands",
           "competitor_source": "AI-identified based on industry knowledge"
         }
       ],
       "brand_strengths": [
-        "Extensible, reliable developer-first infrastructure with 99.999% uptime",
-        "Comprehensive suite covering billing, tax, issuance, and fraud in one ecosystem",
-        "Native support for 135+ currencies and multiple localized payment methods"
+        "Developer-first ecosystem with rich APIs and documentation",
+        "Massive global scale processing trillions in volume with high uptime"
       ],
       "opportunities": [
-        "Capitalize on emerging AI platform agentic payments and machine-to-machine transactions",
-        "Deepen vertical POS integrations for specialized physical retail industries"
+        "Capitalize on emerging stablecoin and crypto payment methods",
+        "Integrate commerce capabilities directly into AI platforms"
       ]
     },
     "target_search_queries": [
       {
-        "query": "best payment gateway for global business",
-        "platforms": ["Google"],
+        "query": "how to accept online payments for ecommerce",
+        "platforms": [
+          "Google"
+        ],
         "intent": "Service Search",
-        "business_relevance": "Direct search intent for businesses seeking scalable international payments",
-        "target_audience": "Technical founders and ecommerce operators"
+        "business_relevance": "Directly targets merchants looking for payment gateway solutions.",
+        "target_audience": "Small business owners and ecommerce founders"
       },
       {
-        "query": "embedded financial infrastructure for platforms",
-        "platforms": ["LinkedIn"],
-        "intent": "B2B Search",
-        "business_relevance": "Targets platform leaders and product managers evaluating monetized payments",
-        "target_audience": "CTOs, Heads of Product, and Platform Architects"
-      },
-      {
-        "query": "how to integrate online payments on website",
-        "platforms": ["Facebook"],
+        "query": "best payment gateway for growing SaaS businesses",
+        "platforms": [
+          "Facebook"
+        ],
         "intent": "Business Discovery",
-        "business_relevance": "Educational entry point for SMB merchants setting up checkouts",
-        "target_audience": "New business owners and entrepreneurs"
+        "business_relevance": "Captures business owners seeking subscription billing infrastructure.",
+        "target_audience": "Startup founders and SaaS operators"
       },
       {
-        "query": "subscription billing software for saas",
-        "platforms": ["Instagram"],
+        "query": "how to implement usage-based billing models",
+        "platforms": [
+          "Instagram"
+        ],
         "intent": "Inspiration",
-        "business_relevance": "Engages software founders seeking recurring billing architectures",
-        "target_audience": "SaaS founders and growth marketers"
+        "business_relevance": "Highlights modern billing features offered by the platform.",
+        "target_audience": "Product managers and developers"
       },
       {
-        "query": "fraud prevention tools for online payments",
-        "platforms": ["X"],
+        "query": "embedded financial services for software platforms",
+        "platforms": [
+          "LinkedIn"
+        ],
+        "intent": "B2B Search",
+        "business_relevance": "Targets platform leaders looking to monetize transactions.",
+        "target_audience": "Platform executives and fintech product leads"
+      },
+      {
+        "query": "accept crypto and stablecoin payments at checkout",
+        "platforms": [
+          "X"
+        ],
         "intent": "Service Discovery",
-        "business_relevance": "Engages fintech builders and security-conscious engineering teams",
-        "target_audience": "Fintech developers and fraud risk managers"
+        "business_relevance": "Aligns with cutting-edge crypto payment integrations.",
+        "target_audience": "Tech-forward merchants and crypto enthusiasts"
       }
     ],
     "seo_improvements": {
       "primary_keyword": "financial infrastructure",
-      "secondary_keywords": ["accept payments online", "payment gateway"],
-      "long_tail_keywords": [
-        "global payment infrastructure for enterprise saas",
-        "automated usage based billing api",
-        "integrated payment fraud prevention tools"
+      "secondary_keywords": [
+        "payment processing",
+        "online payments"
       ],
-      "business_keywords": ["fintech api", "online money movement", "omnichannel payments"],
+      "long_tail_keywords": [
+        "accept payments globally online",
+        "custom revenue models for SaaS"
+      ],
+      "business_keywords": [
+        "billing models",
+        "fraud prevention"
+      ],
       "recommended_title": "Stripe | Financial Infrastructure to Grow Your Revenue",
       "title_primary_keyword": "financial infrastructure",
-      "title_structure_notes": "Brand | Primary Keyword + Clear Value Proposition (<60 chars)",
-      "meta_description": "Accept payments, build flexible billing models, and manage money movement globally with Stripe's complete financial infrastructure platform.",
-      "business_summary": "Stripe builds economic infrastructure for the internet, enabling businesses from startups to global enterprises to accept payments, manage revenue operations, and launch new business models.",
-      "meta_keywords": ["payments", "billing", "financial infrastructure", "fraud prevention", "issuing"],
+      "title_structure_notes": "Brand name followed by value proposition containing primary keyword.",
+      "meta_description": "Stripe is a financial services platform that helps all types of businesses accept payments, build flexible billing models and manage money movement.",
+      "business_summary": "Financial platform for global commerce, payments, and revenue management.",
+      "meta_keywords": [
+        "payments",
+        "financial services"
+      ],
       "supporting_content": [
         {
-          "content_type": "blog post",
-          "title": "Scaling SaaS Billing: Trends and Best Practices",
-          "description": "Comprehensive guide detailing modern hybrid usage-based and subscription revenue models.",
-          "target_keyword": "saas billing best practices"
+          "content_type": "landing page",
+          "title": "Stripe for Startups: Scale Your Business Fast",
+          "description": "Discover tools and resources designed to help early-stage startups incorporate, fundraise, and accept payments.",
+          "target_keyword": "startup payment infrastructure"
         },
         {
-          "content_type": "landing page",
-          "title": "Stripe for Startups: Build and Scale Fast",
-          "description": "Dedicated resource center detailing incorporation, payment activation, and initial credit discounts.",
-          "target_keyword": "startup payment processing"
+          "content_type": "blog post",
+          "title": "The Future of Agentic Commerce and AI Payments",
+          "description": "Learn how businesses can make their products shoppable through AI platforms using new protocols.",
+          "target_keyword": "AI payments commerce"
         },
         {
           "content_type": "FAQ",
-          "title": "Global Payment Processing FAQ: Currencies, Methods, and Compliance",
-          "description": "Answers to merchant queries on cross-border transactions, interchange fees, and regulatory requirements.",
-          "target_keyword": "global payment gateway faq"
+          "title": "Stripe Billing and Subscription Management FAQ",
+          "description": "Answers to common questions about setting up flexible billing models, invoicing, and usage-based pricing.",
+          "target_keyword": "subscription billing models"
         }
       ]
     },
     "top_services": [
       {
         "service_name": "Online and In-Person Payment Processing",
-        "description": "Higher authorization rates and unified commerce across online checkouts and physical terminals.",
-        "target_industry": "E-commerce, Retail, and Digital Services",
-        "target_customer": "Online retailers and multichannel merchants",
-        "main_benefit": "Maximize checkout conversion with optimized localized payment rails.",
+        "description": "Accept payments globally across online checkouts, in-person terminals, and digital wallets.",
+        "target_industry": "Retail & Ecommerce",
+        "target_customer": "Businesses of all sizes",
+        "main_benefit": "Optimized conversion rates and global payment method support.",
         "source": "website"
       },
       {
-        "service_name": "Stripe Billing",
-        "description": "Automated revenue collection, recurring invoicing, and usage-based subscriptions.",
-        "target_industry": "Software and SaaS",
-        "target_customer": "Subscription businesses and software companies",
-        "main_benefit": "Eliminate billing friction and reduce involuntary churn with smart recovery.",
+        "service_name": "Flexible Billing and Subscriptions",
+        "description": "Enable any billing model including recurring subscriptions and usage-based pricing.",
+        "target_industry": "SaaS & Software",
+        "target_customer": "Subscription-based businesses",
+        "main_benefit": "Automated revenue collection and reduced churn.",
         "source": "website"
       },
       {
-        "service_name": "Stripe Radar",
-        "description": "Zero friction for genuine customers while blocking bad actors using adaptive machine learning.",
-        "target_industry": "High-volume internet businesses",
-        "target_customer": "Fraud risk teams and finance managers",
-        "main_benefit": "Stop payment fraud without rejecting legitimate customer transactions.",
+        "service_name": "Fraud and Risk Management",
+        "description": "Stop fraud, card testing, and bot abuse without halting legitimate growth.",
+        "target_industry": "Financial Services & Commerce",
+        "target_customer": "Online merchants",
+        "main_benefit": "Advanced machine learning risk profiling.",
         "source": "website"
       },
       {
-        "service_name": "Stripe Connect",
-        "description": "New revenue streams and simplified multi-party payouts for platforms and marketplaces.",
-        "target_industry": "Vertical SaaS and Marketplaces",
-        "target_customer": "Platform executives and marketplace operators",
-        "main_benefit": "Onboard sub-merchants and programmatically route payments at scale.",
+        "service_name": "Embedded Financial Services for Platforms",
+        "description": "Embed payments and financial services directly into vertical SaaS platforms.",
+        "target_industry": "Vertical SaaS",
+        "target_customer": "Software platform operators",
+        "main_benefit": "New revenue streams through monetized platform transactions.",
         "source": "website"
       },
       {
-        "service_name": "Professional Implementation Services",
-        "description": "Faster time-to-market and minimized integration risk with guided architectural advisory.",
-        "target_industry": "Enterprises and high-growth companies",
-        "target_customer": "Enterprise CTOs and engineering directors",
-        "main_benefit": "Accelerate mission-critical migrations with dedicated technical support.",
+        "service_name": "Custom Card Issuing",
+        "description": "Create, manage, and distribute physical and virtual corporate payment cards.",
+        "target_industry": "Fintech & Enterprise",
+        "target_customer": "Growing enterprises and fintechs",
+        "main_benefit": "Full control over card spending limits and branding.",
         "source": "website"
       }
     ],
     "target_audience": {
       "primary_audience": [
         {
-          "audience_name": "Software Engineers & CTOs",
-          "business_type": "Technology & SaaS",
-          "requirement": "Reliable, well-documented APIs and scalable developer tools."
+          "audience_name": "Startup Founders",
+          "business_type": "Early-stage startup",
+          "requirement": "Fast setup, incorporation, and foundational payment acceptance."
         },
         {
-          "audience_name": "Startup Founders",
-          "business_type": "Early-stage Companies",
-          "requirement": "Fast incorporation, easy setup, and tools to accept payments quickly."
+          "audience_name": "Enterprise Product Managers",
+          "business_type": "Fortune 500 / Enterprise",
+          "requirement": "Reliable global commerce orchestration and custom workflows."
         }
       ],
       "secondary_audience": [
         {
-          "audience_name": "Enterprise Finance Leaders",
-          "business_type": "Large Retail & Enterprise",
-          "requirement": "Omnichannel revenue consolidation and high uptime reliability."
+          "audience_name": "Platform Operators",
+          "business_type": "Vertical SaaS",
+          "requirement": "Embedded payments and multi-party money movement."
+        },
+        {
+          "audience_name": "Developers",
+          "business_type": "Technology",
+          "requirement": "Robust APIs, SDKs, and clean technical documentation."
         }
       ],
       "industries": [
-        "SaaS and Software",
-        "Retail and E-commerce",
-        "Marketplaces",
-        "Artificial Intelligence"
+        "Ecommerce",
+        "SaaS",
+        "Retail",
+        "Artificial Intelligence",
+        "Financial Services"
+      ],
+      "business_types": [
+        "Startups",
+        "SMBs",
+        "Vertical SaaS Platforms",
+        "Fortune 100 Enterprises"
+      ],
+      "customer_profiles": [
+        "Tech-savvy startup founders building global software and SaaS products",
+        "Enterprise directors of finance looking to unify online and in-store commerce"
       ],
       "customer_needs": [
-        "Global payment method support without localized entity overhead",
-        "Automated compliance and PCI-DSS burden offloading",
-        "Integrated subscription metrics and financial reconciliation"
+        "Secure payment processing",
+        "Global currency support",
+        "Automated recurring billing",
+        "Low operational overhead"
       ],
       "geographical_focus": null,
       "customer_interests": [
-        "API first architecture",
-        "Global economic growth",
-        "Frictionless checkout UX"
+        "Financial technology",
+        "Business growth",
+        "AI integration",
+        "International expansion"
       ],
       "recommended_segments": [
-        "Fast-scaling AI applications needing metered usage billing",
-        "Platforms expanding into embedded banking services"
+        "High-growth AI startups",
+        "Global enterprise retailers",
+        "B2B SaaS platforms"
       ]
     }
   }
@@ -469,36 +526,42 @@ The test suite covers unit validations, SSRF filters, schema boundary checks, ra
 pytest tests/ -v
 ```
 
-### Test Suite Summary (26/26 Passing)
+### Test Suite Summary (32/32 Passing)
 
 ```text
-tests/test_link_analysis.py::test_health_check PASSED                          [  3%]
-tests/test_link_analysis.py::test_missing_url PASSED                           [  7%]
-tests/test_link_analysis.py::test_invalid_url PASSED                           [ 11%]
-tests/test_link_analysis.py::test_private_ip_blocked PASSED                    [ 15%]
-tests/test_link_analysis.py::test_private_ip_10_blocked PASSED                 [ 19%]
-tests/test_link_analysis.py::test_validate_url_good PASSED                     [ 23%]
-tests/test_link_analysis.py::test_validate_url_ftp_rejected PASSED             [ 26%]
-tests/test_link_analysis.py::test_validate_url_localhost_ssrf PASSED           [ 30%]
-tests/test_link_analysis.py::test_validate_url_192_168_ssrf PASSED             [ 34%]
-tests/test_link_analysis.py::test_validate_url_no_host PASSED                  [ 38%]
-tests/test_link_analysis.py::test_validate_url_with_credentials_rejected PASSED [ 42%]
-tests/test_link_analysis.py::test_validate_url_non_standard_port_rejected PASSED [ 46%]
-tests/test_link_analysis.py::test_full_analysis_mocked PASSED                  [ 50%]
-tests/test_link_analysis.py::test_llm_runtime_error_returns_502 PASSED         [ 53%]
-tests/test_link_analysis.py::test_too_few_competitors_returns_502 PASSED       [ 57%]
-tests/test_link_analysis.py::test_too_many_competitors_returns_502 PASSED      [ 61%]
-tests/test_link_analysis.py::test_wrong_query_count_returns_502 PASSED         [ 65%]
-tests/test_link_analysis.py::test_wrong_service_count_returns_502 PASSED       [ 69%]
-tests/test_link_analysis.py::test_insufficient_supporting_content_returns_502 PASSED [ 73%]
-tests/test_link_analysis.py::test_cache_hit_skips_extractor_and_llm PASSED   [ 76%]
-tests/test_link_analysis.py::test_website_inaccessible_returns_400 PASSED      [ 80%]
-tests/test_link_analysis.py::test_rate_limit_returns_429 PASSED                [ 84%]
-tests/test_link_analysis.py::test_cache_set_and_get PASSED                     [ 88%]
-tests/test_link_analysis.py::test_cache_expired_entry_returns_none PASSED      [ 92%]
-tests/test_link_analysis.py::test_cache_normalises_trailing_slash PASSED       [ 96%]
-tests/test_link_analysis.py::test_cache_invalidate PASSED                      [100%]
-============================== 26 passed in 1.88s ==============================
+tests/test_link_analysis.py::test_health_check PASSED [  3%]
+tests/test_link_analysis.py::test_health_reports_config_without_leaking_key PASSED [  6%]
+tests/test_link_analysis.py::test_health_in_browser_returns_status_page PASSED [  9%]
+tests/test_link_analysis.py::test_docs_page_links_back_to_ui PASSED [ 12%]
+tests/test_link_analysis.py::test_web_ui_served_at_root PASSED [ 15%]
+tests/test_link_analysis.py::test_missing_url PASSED [ 18%]
+tests/test_link_analysis.py::test_invalid_url PASSED [ 21%]
+tests/test_link_analysis.py::test_private_ip_blocked PASSED [ 25%]
+tests/test_link_analysis.py::test_private_ip_10_blocked PASSED [ 28%]
+tests/test_link_analysis.py::test_validate_url_good PASSED [ 31%]
+tests/test_link_analysis.py::test_validate_url_ftp_rejected PASSED [ 34%]
+tests/test_link_analysis.py::test_validate_url_localhost_ssrf PASSED [ 37%]
+tests/test_link_analysis.py::test_validate_url_192_168_ssrf PASSED [ 40%]
+tests/test_link_analysis.py::test_validate_url_no_host PASSED [ 43%]
+tests/test_link_analysis.py::test_validate_url_with_credentials_rejected PASSED [ 46%]
+tests/test_link_analysis.py::test_validate_url_non_standard_port_rejected PASSED [ 50%]
+tests/test_link_analysis.py::test_full_analysis_mocked PASSED [ 53%]
+tests/test_link_analysis.py::test_llm_runtime_error_returns_502 PASSED [ 56%]
+tests/test_link_analysis.py::test_too_few_competitors_returns_502 PASSED [ 59%]
+tests/test_link_analysis.py::test_too_many_competitors_returns_502 PASSED [ 62%]
+tests/test_link_analysis.py::test_wrong_query_count_returns_502 PASSED [ 65%]
+tests/test_link_analysis.py::test_wrong_service_count_returns_502 PASSED [ 68%]
+tests/test_link_analysis.py::test_insufficient_supporting_content_returns_502 PASSED [ 71%]
+tests/test_link_analysis.py::test_cache_hit_skips_extractor_and_llm PASSED [ 75%]
+tests/test_link_analysis.py::test_website_inaccessible_returns_400 PASSED [ 78%]
+tests/test_link_analysis.py::test_rate_limit_returns_429 PASSED [ 81%]
+tests/test_link_analysis.py::test_cache_set_and_get PASSED [ 84%]
+tests/test_link_analysis.py::test_cache_expired_entry_returns_none PASSED [ 87%]
+tests/test_link_analysis.py::test_cache_normalises_trailing_slash PASSED [ 90%]
+tests/test_link_analysis.py::test_cache_invalidate PASSED [ 93%]
+tests/test_link_analysis.py::test_your_brand_and_audience_profile_fields_pass_through PASSED [ 96%]
+tests/test_link_analysis.py::test_extract_content_does_not_duplicate_nested_text PASSED [100%]
+======================== 32 passed, 1 warning in 3.62s ========================
 ```
 
 ---
@@ -517,7 +580,7 @@ Comparison across leading fast-tier inference models using current published rat
 | **Output Cost (per 1M tokens)** | $2.50 | **$0.50** | **$0.50** (base ≤100k) |
 | **Context Window** | **1,048,576 tokens** | 1,050,000 tokens | 1,000,000 tokens |
 | **Native JSON Schema Mode** | `responseMimeType: application/json` | Structured Outputs | Structured Outputs |
-| **Local Benchmark Evidence** | **Measured** (76.89s cold w/ retries; 13,995 total tokens; $0.0093/call) | *Unmeasured in this project* | *Unmeasured in this project* |
+| **Local Benchmark Evidence** | **Measured** (8.60s cold; 6,388 total tokens; $0.0074/call) | *Unmeasured in this project* | *Unmeasured in this project* |
 | **Official Documentation** | [Google Pricing](https://ai.google.dev/gemini-api/docs/pricing) | [OpenAI Docs](https://developers.openai.com/api/docs/models/gpt-6-luna) | [Anthropic Docs](https://platform.claude.com/docs/en/models/haiku-5-5/overview) |
 
 > **Pricing note:** Claude Haiku 5.5 lists a base pricing of $0.10 input / $0.50 output per million tokens for prompts under 100,000 tokens, which rises to $0.50 input / $2.50 output for prompt contexts exceeding 100k tokens.
@@ -528,8 +591,8 @@ Comparison across leading fast-tier inference models using current published rat
 
 1. **Assignment Alignment**: Already integrated in the codebase with verified end-to-end execution and schema compliance.
 2. **Context Capacity**: 1,048,576 tokens context window easily handles large landing pages and eliminates token boundary issues.
-3. **Structured Outputs**: Fully supports strict JSON generation, verified against Pydantic schema validation across 26 tests and live runs.
-4. **Cost Assessment**: At **$0.0093 per full 5-section enterprise analysis** (11,669 input + 2,326 output tokens), it delivers production-grade business insights at sub-cent cost per request. While GPT-6 Luna lists lower nominal per-token pricing, Gemini 3.5 Flash-Lite is operational, tested, and satisfies all requirements.
+3. **Structured Outputs**: Fully supports strict JSON generation, verified against Pydantic schema validation across 32 tests and live runs.
+4. **Cost Assessment**: At **$0.0074 per full 5-section analysis** (3,906 input + 2,482 output tokens, measured), it delivers production-grade business insights at sub-cent cost per request. While GPT-6 Luna lists lower nominal per-token pricing, Gemini 3.5 Flash-Lite is operational, tested, and satisfies all requirements.
 
 ---
 
@@ -537,10 +600,10 @@ Comparison across leading fast-tier inference models using current published rat
 
 | Strategy | Implementation | Evidence & Measured Impact |
 |---|---|---|
-| **HTML Cleaning** | Strips `<script>`, `<style>`, comments, `<svg>`, `<iframe>` before extracting text | **93.7% reduction measured**: On `stripe.com`, raw HTML was 724,310 bytes (723,039 chars), compressed down to 45,489 characters of meaningful content. |
+| **HTML Cleaning & De-duplication** | Strips `<script>`, `<style>`, comments, `<svg>`, `<iframe>`; collects only leaf text blocks so nested wrapper `<div>`s don't repeat their children's text; de-duplicates identical paragraphs | **99.0% reduction measured**: On `stripe.com`, raw HTML was 729,197 bytes (727,926 chars), reduced to 7,589 characters. The leaf-block change alone cut cleaned text from 45,489 to 7,589 chars and prompt tokens from 11,669 to 3,906 (**-67%**) versus the previous extractor, with all five sections still populated. |
 | **Hard Truncation Cap** | Caps body extraction at 50,000 characters (~12,500 tokens) | **Prevents runaway token bills** on documentation sites or large single-page applications. |
 | **Single-Prompt Consolidation** | Gathers all 5 analysis sections in one LLM call | **80% fewer round-trips**: Avoids repeating system prompts, extraction context, and TLS handshakes across 5 separate calls. |
-| **In-Memory TTL Caching** | Serves cached analyses for normalized URLs (`3600s` TTL) | **100% cost reduction on repeats**: Repeat visits within the TTL window resolve in **1.746 ms** with 0 external HTTP/LLM calls. |
+| **In-Memory TTL Caching** | Serves cached analyses for normalized URLs (`3600s` TTL) | **100% cost reduction on repeats**: Repeat visits within the TTL window resolve in **0.217 ms** with 0 external HTTP/LLM calls. |
 | **Sliding-Window Rate Limiting** | Restricts bursts per IP address via pure ASGI middleware | **Quota protection**: Prevents client loops or denial-of-service from exhausting upstream provider tokens. |
 
 ---
@@ -604,7 +667,7 @@ When external competitive intelligence API keys (e.g., SimilarWeb, SEMrush, Ahre
 To complete the public assignment submission:
 
 - [x] **Local Git Repository**: Committed with clean working tree.
-- [x] **26/26 Unit & Integration Tests Passing**: Verified with pytest.
+- [x] **32/32 Unit & Integration Tests Passing**: Verified with pytest.
 - [x] **Live Run Evidence**: `live_run.log` and `live_run_output.json` tracked and checked into the repository.
 - [ ] **Public GitHub Repository**:
   1. Create a new public repository on GitHub (e.g. `dxora_link_analysis`).
@@ -617,7 +680,7 @@ To complete the public assignment submission:
 - [ ] **Public Deployment (Optional / Live Demo)**:
   - If deploying to Render, Railway, or Fly.io:
     - Set environment variable `GEMINI_API_KEY` in the hosting dashboard.
-    - Provide the live URL (e.g., `https://your-app.onrender.com/docs`).
+    - Provide the live URL (e.g., `https://your-app.onrender.com/` for the UI and `/docs` for the API).
 - [ ] **Social Account Verification / Submission Email**: Send the public GitHub repository link and deployed demo link according to the assignment instructions.
 
 ---

@@ -7,7 +7,7 @@ from urllib.parse import urljoin, urlparse
 import aiohttp
 from bs4 import BeautifulSoup, Comment
 from app.config import settings
-from app.utils.validators import resolve_and_check, validate_url, SSRFError
+from app.utils.validators import validate_and_resolve, SSRFError
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +16,16 @@ class WebsiteExtractor:
     """Fetches and extracts meaningful text content from a website URL."""
 
     MAX_REDIRECTS = 10
+
+    # Elements whose full text is collected as one paragraph.
+    _TEXT_TAGS = ["p", "li", "td", "th", "blockquote", "dd", "dt", "figcaption", "pre"]
+    # Generic wrappers: collected only when they contain no block children.
+    _CONTAINER_TAGS = ["div", "span", "section"]
+    # Anything that makes a container a pure wrapper rather than a text block.
+    _BLOCK_TAGS = _TEXT_TAGS + [
+        "div", "section", "article", "ul", "ol", "table",
+        "h1", "h2", "h3", "h4", "h5", "h6",
+    ]
 
     def __init__(self):
         self.timeout = settings.REQUEST_TIMEOUT
@@ -92,9 +102,9 @@ class WebsiteExtractor:
                 hostname = parsed.hostname
                 if not hostname:
                     raise ConnectionError("URL or redirect has no hostname")
-                # Validate scheme, credentials, port, and every DNS result.
-                validated_url = validate_url(current_url)
-                addresses = resolve_and_check(hostname)
+                # Validate scheme, credentials, port, and every DNS result
+                # (one lookup, run off the event loop).
+                validated_url, addresses = await asyncio.to_thread(validate_and_resolve, current_url)
                 resolver = self._PinnedResolver(hostname, addresses)
                 connector = aiohttp.TCPConnector(resolver=resolver, use_dns_cache=False)
                 async with aiohttp.ClientSession(
@@ -182,12 +192,23 @@ class WebsiteExtractor:
                 if text:
                     headings.append({"level": level, "text": text})
 
-        # Main text – prefer <main> or <article>, fall back to <body>
+        # Main text – prefer <main> or <article>, fall back to <body>.
+        # Only "leaf" text blocks are collected: a wrapper <div> whose text is
+        # the concatenation of its children would otherwise repeat the whole
+        # page once per nesting level and waste the LLM token budget.
         main_el = soup.find("main") or soup.find("article") or soup.find("body")
         paragraphs = []
         if main_el:
-            for p in main_el.find_all(["p", "li", "span", "div"], recursive=True):
-                text = p.get_text(separator=" ", strip=True)
+            for el in main_el.find_all(self._TEXT_TAGS + self._CONTAINER_TAGS):
+                # Containers only count when they hold text directly
+                # (no nested block elements that will be collected on their own).
+                if el.name in self._CONTAINER_TAGS and el.find(self._BLOCK_TAGS):
+                    continue
+                # Skip anything nested inside an already-collected text block
+                # (e.g. <p> inside <li>, <span> inside <p>).
+                if el.find_parent(self._TEXT_TAGS):
+                    continue
+                text = el.get_text(separator=" ", strip=True)
                 if text and len(text) > 20:
                     paragraphs.append(text)
 

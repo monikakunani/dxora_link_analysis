@@ -89,9 +89,7 @@ def validate_url(url: str) -> str:
     Validate a URL for correctness and SSRF safety.
 
     Performs DNS resolution and checks all returned IPs against
-    private/reserved ranges.  The resolved IPs are NOT returned here
-    because the fetch layer pins the connection to a validated IP
-    separately (see website_extractor.py).
+    private/reserved ranges.
 
     Args:
         url: The URL string to validate.
@@ -102,6 +100,18 @@ def validate_url(url: str) -> str:
     Raises:
         URLValidationError: If the URL is malformed.
         SSRFError: If the URL resolves to a private/internal address.
+    """
+    return validate_and_resolve(url)[0]
+
+
+def validate_and_resolve(url: str) -> tuple[str, list[str]]:
+    """
+    Same checks as :func:`validate_url`, but also returns the validated
+    public IPs so the fetch layer can pin its connection to them with a
+    single DNS lookup (see website_extractor.py).
+
+    This function does blocking DNS I/O — call it via ``asyncio.to_thread``
+    from async code.
     """
     # Basic parsing
     try:
@@ -135,6 +145,6 @@ def validate_url(url: str) -> str:
         raise SSRFError("Access to localhost is not allowed")
 
     # DNS resolution check — verifies all resolved IPs are public
-    resolve_and_check(hostname)
+    addresses = resolve_and_check(hostname)
 
-    return url
+    return url, addresses

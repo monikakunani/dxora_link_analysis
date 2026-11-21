@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import httpx
@@ -37,6 +38,13 @@ Required JSON structure:
       "brand_overview": "<detailed brand overview>",
       "business_category": "<main category>",
       "main_products_services": ["service1", "service2"],
+      "your_brand": {
+        "name": "<brand name>",
+        "main_service": "<brand's main service>",
+        "target_market": "<brand's target market>",
+        "key_strength": "<brand's key strength>",
+        "opportunity": "<brand's biggest positioning opportunity>"
+      },
       "competitors": [
         {
           "name": "<competitor name>",
@@ -98,6 +106,8 @@ Required JSON structure:
         {"audience_name": "<name>", "business_type": "<type>", "requirement": "<need>"}
       ],
       "industries": ["industry1", "industry2"],
+      "business_types": ["business type 1", "business type 2"],
+      "customer_profiles": ["<short ideal-customer profile>", "<another profile>"],
       "customer_needs": ["need1", "need2"],
       "geographical_focus": "<location or null>",
       "customer_interests": ["interest1", "interest2"],
@@ -191,7 +201,6 @@ class LLMService:
         # Retry on transient 429 / 503 errors with exponential back-off
         _RETRYABLE = {429, 500, 502, 503, 504}
         _MAX_RETRIES = 5
-        last_exc: Exception = RuntimeError("LLM request did not start")
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             for attempt in range(1, _MAX_RETRIES + 1):
@@ -210,17 +219,13 @@ class LLMService:
                         status, attempt, _MAX_RETRIES,
                     )
                     if status in _RETRYABLE and attempt < _MAX_RETRIES:
-                        import asyncio as _asyncio
                         wait = 3 * attempt  # 3s, 6s, 9s, 12s
                         logger.info("Retrying in %ds...", wait)
-                        await _asyncio.sleep(wait)
-                        last_exc = RuntimeError(f"LLM API error ({status})")
+                        await asyncio.sleep(wait)
                         continue
                     raise RuntimeError(f"LLM API error ({status})")
                 except httpx.RequestError as e:
                     raise RuntimeError(f"Could not reach Gemini API: {e}")
-            else:
-                raise last_exc
 
         result = response.json()
         self.last_usage = result.get("usageMetadata", {})

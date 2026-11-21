@@ -29,14 +29,15 @@ ENV PATH="/opt/venv/bin:$PATH"
 # Copy source code
 COPY --chown=app:app app/ ./app/
 
-# Expose the application port (matches settings.PORT default)
+# Hosting platforms (Render, Railway, Fly.io, Cloud Run) inject $PORT; default 4000 locally.
+ENV PORT=4000
 EXPOSE 4000
 
 USER app
 
-# Health check — calls the /  endpoint
+# Health check — calls the /health endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:4000/')" \
+    CMD python -c "import urllib.request; import os; urllib.request.urlopen('http://localhost:%s/health' % os.environ.get('PORT', '4000'))" \
     || exit 1
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "4000", "--workers", "1"]
+CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-4000} --workers 1 --proxy-headers --forwarded-allow-ips='*'"]

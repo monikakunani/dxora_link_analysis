@@ -25,11 +25,23 @@ class Competitor(BaseModel):
     )
 
 
+class BrandProfile(BaseModel):
+    """The analyzed brand's own row in the 'Your Brand vs Competitor' comparison."""
+    name: str = Field("", description="Your brand name")
+    main_service: str = Field("", description="Your brand's main service or product")
+    target_market: str = Field("", description="Your brand's target market")
+    key_strength: str = Field("", description="Your brand's key strength")
+    opportunity: str = Field("", description="Your brand's biggest positioning opportunity")
+
+
 class CompetitorAnalysis(BaseModel):
     """Section 1: Competitor vs Your Brand analysis."""
     brand_overview: str = Field(..., description="Overview of the analyzed brand")
     business_category: str = Field(..., description="Main business category")
     main_products_services: list[str] = Field(default_factory=list, description="Main products and services")
+    your_brand: Optional[BrandProfile] = Field(
+        None, description="Your brand's side of the comparison table (same fields as each competitor)"
+    )
     competitors: list[Competitor] = Field(default_factory=list, min_length=3, description="Identified competitor suggestions (minimum 3)")
     brand_strengths: list[str] = Field(default_factory=list, description="Your brand's competitive advantages")
     opportunities: list[str] = Field(default_factory=list, description="Opportunities to improve market positioning")
@@ -102,6 +114,8 @@ class TargetAudience(BaseModel):
     primary_audience: list[AudienceSegment] = Field(default_factory=list, description="Primary target audiences")
     secondary_audience: list[AudienceSegment] = Field(default_factory=list, description="Secondary target audiences")
     industries: list[str] = Field(default_factory=list, description="Relevant industry segments")
+    business_types: list[str] = Field(default_factory=list, description="Types of businesses / buyers served")
+    customer_profiles: list[str] = Field(default_factory=list, description="Short ideal-customer profiles")
     customer_needs: list[str] = Field(default_factory=list, description="Customer needs and challenges")
     geographical_focus: Optional[str] = Field(None, description="Location or geographical focus if available")
     customer_interests: list[str] = Field(default_factory=list, description="Potential customer interests")

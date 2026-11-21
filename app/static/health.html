@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Service Status</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --surface: #ffffff; --surface-2: #f0f2f5; --border: #e2e5ea;
+    --text: #16181d; --muted: #5d6470; --accent: #3b5bdb;
+    --good: #1f7a4d; --good-soft: #e3f4ea; --bad: #b42318; --bad-soft: #fdecea; --warn: #8a5a00; --warn-soft: #fff3d6;
+    --shadow: 0 1px 2px rgba(16,24,40,.06), 0 1px 3px rgba(16,24,40,.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1115; --surface: #171a21; --surface-2: #1e222b; --border: #2a2f3a;
+      --text: #e8eaef; --muted: #9aa3b2; --accent: #7c95ff;
+      --good: #5cc98f; --good-soft: #17342a; --bad: #ff8a80; --bad-soft: #3d1c1a; --warn: #f2c063; --warn-soft: #3a2f14;
+      --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: var(--accent); }
+  header.top { border-bottom: 1px solid var(--border); background: var(--surface); }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 16px; }
+  header.top .wrap { display: flex; align-items: center; justify-content: space-between; height: 56px; max-width: 1080px; }
+  .logo { font-weight: 700; display: flex; gap: 8px; align-items: center; text-decoration: none; color: var(--text); }
+  .logo-mark { width: 22px; height: 22px; border-radius: 6px; background: var(--accent); }
+  .top nav a { font-size: 14px; text-decoration: none; margin-left: 18px; color: var(--muted); }
+  .top nav a:hover { color: var(--text); }
+
+  .banner {
+    margin: 40px 0 18px; padding: 22px 24px; border-radius: 14px; display: flex; gap: 16px; align-items: center;
+    background: var(--surface-2);
+  }
+  .banner.ok { background: var(--good-soft); }
+  .banner.down { background: var(--bad-soft); }
+  .pulse { width: 16px; height: 16px; border-radius: 50%; background: var(--muted); flex: none; position: relative; }
+  .ok .pulse { background: var(--good); }
+  .down .pulse { background: var(--bad); }
+  .ok .pulse::after {
+    content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--good);
+    opacity: 0; animation: ring 2s ease-out infinite;
+  }
+  @keyframes ring { 0% { transform: scale(.5); opacity: .8; } 100% { transform: scale(1.4); opacity: 0; } }
+  @media (prefers-reduced-motion: reduce) { .ok .pulse::after { animation: none; } }
+  .banner h1 { margin: 0; font-size: 22px; letter-spacing: -.01em; }
+  .ok h1 { color: var(--good); }
+  .down h1 { color: var(--bad); }
+  .banner p { margin: 2px 0 0; color: var(--muted); font-size: 14px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+  .row { display: flex; justify-content: space-between; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--border); align-items: center; }
+  .row:last-child { border-bottom: 0; }
+  .row .label { color: var(--muted); }
+  .row .value { font-weight: 600; text-align: right; word-break: break-word; }
+  .tag { display: inline-block; font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 999px; }
+  .tag.good { background: var(--good-soft); color: var(--good); }
+  .tag.bad { background: var(--bad-soft); color: var(--bad); }
+  .tag.warn { background: var(--warn-soft); color: var(--warn); }
+  code { background: var(--surface-2); padding: 1px 6px; border-radius: 6px; font-size: 13px; }
+
+  .meta { color: var(--muted); font-size: 13px; margin: 14px 2px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  details { margin: 8px 0 48px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 14px; }
+  pre { background: var(--surface-2); border-radius: 10px; padding: 14px; overflow: auto; font-size: 13px; }
+  .actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+  .btn { display: inline-block; border-radius: 10px; padding: 9px 16px; font-weight: 600; text-decoration: none; font-size: 14px; }
+  .btn.primary { background: var(--accent); color: #fff; }
+  @media (prefers-color-scheme: dark) { .btn.primary { color: #0f1115; } }
+  .btn.ghost { border: 1px solid var(--border); color: var(--text); background: var(--surface); }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="/"><span class="logo-mark" aria-hidden="true"></span>Link Analysis</a>
+    <nav><a href="/">Analyze a website</a><a href="/docs">API docs</a></nav>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="banner" id="banner" role="status" aria-live="polite">
+    <span class="pulse" aria-hidden="true"></span>
+    <div><h1 id="headline">Checking status…</h1><p id="sub">Contacting the server</p></div>
+  </div>
+
+  <div class="card" id="details">
+    <div class="row"><span class="label">API server</span><span class="value" id="v-server">—</span></div>
+    <div class="row"><span class="label">AI provider key</span><span class="value" id="v-key">—</span></div>
+    <div class="row"><span class="label">AI model</span><span class="value" id="v-model">—</span></div>
+    <div class="row"><span class="label">Up for</span><span class="value" id="v-uptime">—</span></div>
+    <div class="row"><span class="label">Analyses in cache</span><span class="value" id="v-cache">—</span></div>
+    <div class="row"><span class="label">Response time</span><span class="value" id="v-latency">—</span></div>
+    <div class="row"><span class="label">Version</span><span class="value" id="v-version">—</span></div>
+  </div>
+
+  <div class="meta"><span id="checked">Not checked yet</span><span>Refreshes every 10 seconds</span></div>
+
+  <div class="actions">
+    <a class="btn primary" href="/">Analyze a website</a>
+    <a class="btn ghost" href="/docs">Open API docs</a>
+  </div>
+
+  <details>
+    <summary>Raw response (for monitoring tools)</summary>
+    <pre id="raw">—</pre>
+  </details>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  function $(id) { return document.getElementById(id); }
+  function tag(text, kind) { return '<span class="tag ' + kind + '">' + text + "</span>"; }
+  function esc(v) { return String(v == null ? "" : v).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function duration(s) {
+    var d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+    if (d) return d + "d " + h + "h";
+    if (h) return h + "h " + m + "m";
+    if (m) return m + "m " + sec + "s";
+    return sec + "s";
+  }
+
+  async function check() {
+    var t0 = performance.now();
+    try {
+      var res = await fetch("/health", { headers: { Accept: "application/json" }, cache: "no-store" });
+      var data = await res.json();
+      var ms = Math.round(performance.now() - t0);
+      var ok = res.ok && data.status === "healthy";
+      var keyOk = !!data.llm_api_key_configured;
+
+      $("banner").className = "banner " + (ok ? "ok" : "down");
+      $("headline").textContent = ok ? (keyOk ? "All systems operational" : "Online, but the AI key is missing") : "Service is having problems";
+      $("sub").textContent = ok
+        ? (keyOk ? "The analysis service is running and ready to accept requests." : "Add GEMINI_API_KEY to the environment so analyses can run.")
+        : "The server responded, but reported an unhealthy state.";
+
+      $("v-server").innerHTML = ok ? tag("Online", "good") : tag("Unhealthy", "bad");
+      $("v-key").innerHTML = keyOk ? tag("Configured", "good") : tag("Missing", "bad");
+      $("v-model").innerHTML = data.llm_model ? "<code>" + esc(data.llm_model) + "</code>" : "—";
+      $("v-uptime").textContent = data.uptime_seconds != null ? duration(data.uptime_seconds) : "—";
+      $("v-cache").textContent = data.cached_analyses != null ? data.cached_analyses : "—";
+      $("v-latency").innerHTML = ms + " ms " + (ms < 300 ? tag("Fast", "good") : ms < 1500 ? tag("OK", "warn") : tag("Slow", "bad"));
+      $("v-version").textContent = data.version || "—";
+      $("raw").textContent = JSON.stringify(data, null, 2);
+    } catch (e) {
+      $("banner").className = "banner down";
+      $("headline").textContent = "Service unreachable";
+      $("sub").textContent = "Could not contact the server. It may be stopped or restarting.";
+      $("v-server").innerHTML = tag("Offline", "bad");
+      $("raw").textContent = String(e);
+    }
+    $("checked").textContent = "Last checked " + new Date().toLocaleTimeString();
+  }
+  check();
+  setInterval(check, 10000);
+})();
+</script>
+</body>
+</html>

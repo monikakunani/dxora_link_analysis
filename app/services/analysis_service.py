@@ -6,6 +6,7 @@ from app.services.cache_service import analysis_cache
 from app.schemas import (
     LinkAnalysisResponse,
     BrandInfo,
+    BrandProfile,
     Analysis,
     CompetitorAnalysis,
     Competitor,
@@ -97,10 +98,12 @@ class AnalysisService:
                 f"exactly {REQUIRED_COMPETITORS} are required."
             )
 
+        your_brand_raw = comp_raw.get("your_brand")
         competitor_analysis = CompetitorAnalysis(
             brand_overview=comp_raw.get("brand_overview", ""),
             business_category=comp_raw.get("business_category", ""),
             main_products_services=comp_raw.get("main_products_services", []),
+            your_brand=BrandProfile(**your_brand_raw) if isinstance(your_brand_raw, dict) else None,
             competitors=competitors,
             brand_strengths=comp_raw.get("brand_strengths", []),
             opportunities=comp_raw.get("opportunities", []),
@@ -160,6 +163,8 @@ class AnalysisService:
                 AudienceSegment(**a) for a in ta_raw.get("secondary_audience", [])
             ],
             industries=ta_raw.get("industries", []),
+            business_types=ta_raw.get("business_types", []),
+            customer_profiles=ta_raw.get("customer_profiles", []),
             customer_needs=ta_raw.get("customer_needs", []),
             geographical_focus=ta_raw.get("geographical_focus"),
             customer_interests=ta_raw.get("customer_interests", []),

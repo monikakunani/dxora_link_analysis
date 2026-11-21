@@ -218,10 +218,45 @@ def _patched_analysis(extractor_return=None, llm_return=None):
 
 def test_health_check():
     """Test the health check endpoint."""
-    response = client.get("/")
+    response = client.get("/health")
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "healthy"
+
+
+def test_health_reports_config_without_leaking_key():
+    """JSON health includes readiness details but never the API key itself."""
+    data = client.get("/health").json()
+    assert set(data) >= {"llm_model", "llm_api_key_configured", "cached_analyses", "uptime_seconds"}
+    assert isinstance(data["llm_api_key_configured"], bool)
+    from app.config import settings
+    if settings.GEMINI_API_KEY:
+        assert settings.GEMINI_API_KEY not in client.get("/health").text
+
+
+def test_health_in_browser_returns_status_page():
+    """Browsers asking for HTML get the readable status page, not raw JSON."""
+    response = client.get("/health", headers={"Accept": "text/html,application/xhtml+xml"})
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "Service Status" in response.text
+
+
+def test_docs_page_links_back_to_ui():
+    """Swagger docs still load and include a way back to the web UI."""
+    response = client.get("/docs")
+    assert response.status_code == 200
+    assert "swagger-ui" in response.text
+    assert 'href="/"' in response.text
+    assert client.get("/openapi.json").json()["paths"].get("/link-analysis")
+
+
+def test_web_ui_served_at_root():
+    """The browser UI is served at / and posts to the analysis endpoint."""
+    response = client.get("/")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "/link-analysis" in response.text
 
 
 # ── Input Validation ──────────────────────────────────────────────────────────
@@ -620,3 +655,59 @@ def test_cache_invalidate():
     removed, after = _asyncio.run(_run())
     assert removed is True
     assert after is None
+
+
+# ── Section 1 / Section 5 extra fields ───────────────────────────────────────
+
+def test_your_brand_and_audience_profile_fields_pass_through():
+    """'Your Brand' comparison row and audience business types/profiles are returned."""
+    llm = copy.deepcopy(MOCK_LLM_RESPONSE)
+    llm["analysis"]["competitor_analysis"]["your_brand"] = {
+        "name": "Test Corp",
+        "main_service": "Web Development",
+        "target_market": "Small Businesses",
+        "key_strength": "Affordable Solutions",
+        "opportunity": "Improve Online Visibility",
+    }
+    llm["analysis"]["target_audience"]["business_types"] = ["Startups", "Retail"]
+    llm["analysis"]["target_audience"]["customer_profiles"] = ["Founder of a 10-person SaaS"]
+
+    response = _patched_analysis(llm_return=llm)
+
+    assert response.status_code == 200
+    analysis = response.json()["analysis"]
+    assert analysis["competitor_analysis"]["your_brand"]["target_market"] == "Small Businesses"
+    assert analysis["target_audience"]["business_types"] == ["Startups", "Retail"]
+    assert analysis["target_audience"]["customer_profiles"] == ["Founder of a 10-person SaaS"]
+
+
+# ── Content extraction ───────────────────────────────────────────────────────
+
+def test_extract_content_does_not_duplicate_nested_text():
+    """Wrapper <div>s must not repeat their children's text in main_text."""
+    from app.services.website_extractor import WebsiteExtractor
+
+    html = """
+    <html><head><title>Acme</title><script>var x = 1;</script></head><body>
+      <div class="wrap">
+        <div class="hero"><h1>Acme</h1><p>We build fast websites for small businesses.</p></div>
+        <div class="services"><ul>
+          <li><span>Web development for startups and SMBs</span></li>
+          <li><p>SEO audits and content strategy plans</p></li>
+        </ul></div>
+        <div>Contact our London office for a free quote today</div>
+      </div>
+    </body></html>
+    """
+    content = WebsiteExtractor().extract_content(html)
+    lines = content["main_text"].splitlines()
+
+    assert lines == [
+        "We build fast websites for small businesses.",
+        "Web development for startups and SMBs",
+        "SEO audits and content strategy plans",
+        "Contact our London office for a free quote today",
+    ]
+    assert "var x" not in content["main_text"]
+    assert content["title"] == "Acme"
+    assert {"level": 1, "text": "Acme"} in content["headings"]
