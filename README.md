@@ -9,6 +9,18 @@
 
 ---
 
+
+## Live Demo
+
+| | Link |
+|---|---|
+| **Web UI** | [https://dxora-link-analysis-c6gq.onrender.com](https://dxora-link-analysis-c6gq.onrender.com) |
+| **API endpoint** | `POST https://dxora-link-analysis-c6gq.onrender.com/link-analysis` |
+| **API docs (Swagger)** | [https://dxora-link-analysis-c6gq.onrender.com/docs](https://dxora-link-analysis-c6gq.onrender.com/docs) |
+| **Service status** | [https://dxora-link-analysis-c6gq.onrender.com/health](https://dxora-link-analysis-c6gq.onrender.com/health) |
+
+> Hosted on Render's free tier: after ~15 minutes without traffic the instance sleeps, so the first request can take 30-60 seconds while it wakes up.
+
 ## Table of Contents
 
 - [Features](#features)
@@ -675,10 +687,7 @@ To complete the public assignment submission:
 - [x] **32/32 Unit & Integration Tests Passing**: Verified with pytest.
 - [x] **Live Run Evidence**: `live_run.log` and `live_run_output.json` tracked and checked into the repository.
 - [x] **Public GitHub Repository**: [github.com/monikakunani/dxora_link_analysis](https://github.com/monikakunani/dxora_link_analysis)
-- [ ] **Public Deployment (Optional / Live Demo)**:
-  - If deploying to Render, Railway, or Fly.io:
-    - Set environment variable `GEMINI_API_KEY` in the hosting dashboard.
-    - Provide the live URL (e.g., `https://your-app.onrender.com/` for the UI and `/docs` for the API).
+- [x] **Public Deployment**: [https://dxora-link-analysis-c6gq.onrender.com](https://dxora-link-analysis-c6gq.onrender.com) (API docs at [`/docs`](https://dxora-link-analysis-c6gq.onrender.com/docs)), deployed on Render from [`render.yaml`](render.yaml)
 - [ ] **Social Account Verification / Submission Email**: Send the public GitHub repository link and deployed demo link according to the assignment instructions.
 
 ---
