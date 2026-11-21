@@ -191,6 +191,12 @@ The server will be reachable at `http://localhost:4000`.
 
 The web UI is a single dependency-free HTML file ([`app/static/index.html`](app/static/index.html)) that calls the same `POST /link-analysis` endpoint. All text from the analyzed site and the LLM is HTML-escaped before rendering.
 
+### Deploy to Render (free)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/monikakunani/dxora_link_analysis)
+
+The included [`render.yaml`](render.yaml) builds the Dockerfile, uses `/health` as the health check, and prompts for `GEMINI_API_KEY` at deploy time, so the key is never stored in the repository.
+
 ### Docker Deployment
 
 Build and run the self-contained container:
